@@ -15,6 +15,7 @@ const listStockLedgerSchema = z.object({
   body: z.object({}).optional(),
   params: z.object({}).optional(),
   query: z.object({
+    search: z.string().trim().max(150).optional(),
     product_id: z.coerce.number().int().positive().optional(),
     movement_type: z.enum([
       'sales_delivery',

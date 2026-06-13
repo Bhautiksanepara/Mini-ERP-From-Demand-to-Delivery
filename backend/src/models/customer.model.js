@@ -25,7 +25,7 @@ async function list(filters = {}) {
   const limit = Math.min(Number(filters.limit || 50), 200);
   const offset = Number(filters.offset || 0);
 
-  const [rows] = await pool.execute(
+  const [rows] = await pool.query(
     `SELECT ${columns}
      FROM customers
      WHERE ${where.join(' AND ')}

@@ -40,6 +40,11 @@ async function listStockLedger(filters = {}) {
   const where = [];
   const values = [];
 
+  if (filters.search) {
+    where.push('(p.name LIKE ? OR p.reference LIKE ? OR sl.movement_type LIKE ? OR sl.note LIKE ?)');
+    values.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+  }
+
   if (filters.product_id) {
     where.push('sl.product_id = ?');
     values.push(filters.product_id);

@@ -57,14 +57,20 @@ const updateUser = asyncHandler(async (req, res) => {
       throw new AppError('You are not authorized to update another user\'s profile', 403);
     }
     
-    // Non-admin editing themselves. Prevent changes to position, is_active, role_codes
+    const beforeRoles = (before.roles || []).map(r => r.code).sort().join(',');
+    const payloadRoles = payload.role_codes ? [...payload.role_codes].sort().join(',') : beforeRoles;
+
     if (
-      payload.position !== undefined ||
-      payload.is_active !== undefined ||
-      payload.role_codes !== undefined
+      (payload.position !== undefined && payload.position !== before.position) ||
+      (payload.is_active !== undefined && Boolean(payload.is_active) !== Boolean(before.is_active)) ||
+      (payload.role_codes !== undefined && payloadRoles !== beforeRoles)
     ) {
       throw new AppError('You do not have permission to modify administrative fields (position, status, roles)', 403);
     }
+
+    delete payload.position;
+    delete payload.is_active;
+    delete payload.role_codes;
   }
 
   // Handle profile photo conversion from base64 to LONGBLOB buffer

@@ -22,7 +22,7 @@ const salesOrderColumns = `
   so.updated_at,
   so.deleted_at,
   so.deleted_by,
-  COALESCE(SUM(soi.line_total), 0) AS total,
+  COALESCE(SUM(soi.line_total), 0) * 1.18 AS total,
   COUNT(soi.id) AS item_count
 `;
 

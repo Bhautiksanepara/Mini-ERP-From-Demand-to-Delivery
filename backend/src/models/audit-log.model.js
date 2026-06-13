@@ -45,6 +45,11 @@ async function listAuditLogs(filters = {}) {
   const where = [];
   const values = [];
 
+  if (filters.search) {
+    where.push('(u.full_name LIKE ? OR al.module_code LIKE ? OR al.record_type LIKE ? OR al.action LIKE ? OR al.field_changed LIKE ?)');
+    values.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+  }
+
   if (filters.module_code) {
     where.push('al.module_code = ?');
     values.push(filters.module_code);

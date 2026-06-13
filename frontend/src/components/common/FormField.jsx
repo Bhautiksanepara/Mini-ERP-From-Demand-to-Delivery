@@ -5,6 +5,7 @@ export function FormField({
   type = "text",
   children,
   error,
+  disabled = false,
 }) {
   const hasError = Boolean(error);
 
@@ -13,14 +14,17 @@ export function FormField({
       <span>{label}</span>
       {children || (
         <input
-          className={`h-10 rounded-md border bg-white px-3 text-sm font-medium text-slate-800 outline-none transition ${
-            hasError
-              ? "border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
-              : "border-slate-300 focus:border-enterprise-blue focus:ring-2 focus:ring-blue-100"
+          className={`h-10 rounded-md border px-3 text-sm font-medium outline-none transition ${
+            disabled
+              ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
+              : hasError
+                ? "border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-2 focus:ring-rose-100 text-slate-800"
+                : "border-slate-300 focus:border-enterprise-blue focus:ring-2 focus:ring-blue-100 text-slate-800"
           }`}
           type={type}
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          disabled={disabled}
           aria-invalid={hasError}
           aria-describedby={
             hasError
