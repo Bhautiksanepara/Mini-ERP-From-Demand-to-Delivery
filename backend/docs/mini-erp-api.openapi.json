@@ -33,12 +33,26 @@
     },
     {
       "name": "Products"
+    },
+    {
+      "name": "Sales Orders"
+    },
+    {
+      "name": "Purchase Orders"
+    },
+    {
+      "name": "Bills of Materials"
+    },
+    {
+      "name": "Work Centers"
     }
   ],
   "paths": {
     "/api/health": {
       "get": {
-        "tags": ["Health"],
+        "tags": [
+          "Health"
+        ],
         "summary": "Check API and MySQL health",
         "responses": {
           "200": {
@@ -60,7 +74,9 @@
     },
     "/api/auth/signup": {
       "post": {
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Create a user",
         "description": "Admin role signup is blocked unless ALLOW_ADMIN_SIGNUP=true in the backend environment.",
         "requestBody": {
@@ -78,7 +94,9 @@
                 "address": "Colaba, Mumbai, 400001",
                 "mobile_number": "+918000000000",
                 "position": "Sales Manager",
-                "role_codes": ["sales_user"]
+                "role_codes": [
+                  "sales_user"
+                ]
               }
             }
           }
@@ -108,7 +126,9 @@
     },
     "/api/auth/login": {
       "post": {
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Login",
         "requestBody": {
           "required": true,
@@ -143,7 +163,9 @@
     },
     "/api/auth/me": {
       "get": {
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Get logged-in user profile",
         "security": [
           {
@@ -169,7 +191,9 @@
     },
     "/api/permissions/metadata": {
       "get": {
-        "tags": ["Permissions"],
+        "tags": [
+          "Permissions"
+        ],
         "summary": "List roles, modules, and actions",
         "security": [
           {
@@ -195,7 +219,9 @@
     },
     "/api/permissions/me": {
       "get": {
-        "tags": ["Permissions"],
+        "tags": [
+          "Permissions"
+        ],
         "summary": "Get logged-in user's module and field permissions",
         "security": [
           {
@@ -221,29 +247,55 @@
     },
     "/api/customers": {
       "get": {
-        "tags": ["Customers"],
+        "tags": [
+          "Customers"
+        ],
         "summary": "List customers",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/SearchQuery" },
-          { "$ref": "#/components/parameters/LimitQuery" },
-          { "$ref": "#/components/parameters/OffsetQuery" }
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
         ],
         "responses": {
-          "200": { "description": "Customer list" },
-          "401": { "description": "Unauthorized" },
-          "403": { "description": "Forbidden" }
+          "200": {
+            "description": "Customer list"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
         }
       },
       "post": {
-        "tags": ["Customers"],
+        "tags": [
+          "Customers"
+        ],
         "summary": "Create customer",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/ContactRequest" },
+              "schema": {
+                "$ref": "#/components/schemas/ContactRequest"
+              },
               "example": {
                 "name": "Suzuki India",
                 "address": "Mumbai, Maharashtra",
@@ -254,80 +306,162 @@
           }
         },
         "responses": {
-          "201": { "description": "Customer created" },
-          "400": { "description": "Validation failed" },
-          "401": { "description": "Unauthorized" },
-          "403": { "description": "Forbidden" }
+          "201": {
+            "description": "Customer created"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
         }
       }
     },
     "/api/customers/{id}": {
       "get": {
-        "tags": ["Customers"],
+        "tags": [
+          "Customers"
+        ],
         "summary": "Get customer",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/IdPath" }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
         "responses": {
-          "200": { "description": "Customer details" },
-          "404": { "description": "Customer not found" }
+          "200": {
+            "description": "Customer details"
+          },
+          "404": {
+            "description": "Customer not found"
+          }
         }
       },
       "patch": {
-        "tags": ["Customers"],
+        "tags": [
+          "Customers"
+        ],
         "summary": "Update customer",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/IdPath" }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/ContactRequest" },
-              "example": { "address": "Pune, Maharashtra" }
+              "schema": {
+                "$ref": "#/components/schemas/ContactRequest"
+              },
+              "example": {
+                "address": "Pune, Maharashtra"
+              }
             }
           }
         },
         "responses": {
-          "200": { "description": "Customer updated" },
-          "400": { "description": "Validation failed" },
-          "404": { "description": "Customer not found" }
+          "200": {
+            "description": "Customer updated"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Customer not found"
+          }
         }
       },
       "delete": {
-        "tags": ["Customers"],
+        "tags": [
+          "Customers"
+        ],
         "summary": "Delete customer",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/IdPath" }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
         "responses": {
-          "200": { "description": "Customer deleted" },
-          "404": { "description": "Customer not found" }
+          "200": {
+            "description": "Customer deleted"
+          },
+          "404": {
+            "description": "Customer not found"
+          }
         }
       }
     },
     "/api/vendors": {
       "get": {
-        "tags": ["Vendors"],
+        "tags": [
+          "Vendors"
+        ],
         "summary": "List vendors",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/SearchQuery" },
-          { "$ref": "#/components/parameters/LimitQuery" },
-          { "$ref": "#/components/parameters/OffsetQuery" }
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
         ],
         "responses": {
-          "200": { "description": "Vendor list" },
-          "401": { "description": "Unauthorized" },
-          "403": { "description": "Forbidden" }
+          "200": {
+            "description": "Vendor list"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
         }
       },
       "post": {
-        "tags": ["Vendors"],
+        "tags": [
+          "Vendors"
+        ],
         "summary": "Create vendor",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/ContactRequest" },
+              "schema": {
+                "$ref": "#/components/schemas/ContactRequest"
+              },
               "example": {
                 "name": "Plastofact IN",
                 "address": "Nashik, Maharashtra",
@@ -338,80 +472,162 @@
           }
         },
         "responses": {
-          "201": { "description": "Vendor created" },
-          "400": { "description": "Validation failed" },
-          "401": { "description": "Unauthorized" },
-          "403": { "description": "Forbidden" }
+          "201": {
+            "description": "Vendor created"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
         }
       }
     },
     "/api/vendors/{id}": {
       "get": {
-        "tags": ["Vendors"],
+        "tags": [
+          "Vendors"
+        ],
         "summary": "Get vendor",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/IdPath" }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
         "responses": {
-          "200": { "description": "Vendor details" },
-          "404": { "description": "Vendor not found" }
+          "200": {
+            "description": "Vendor details"
+          },
+          "404": {
+            "description": "Vendor not found"
+          }
         }
       },
       "patch": {
-        "tags": ["Vendors"],
+        "tags": [
+          "Vendors"
+        ],
         "summary": "Update vendor",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/IdPath" }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/ContactRequest" },
-              "example": { "mobile_number": "+918000000099" }
+              "schema": {
+                "$ref": "#/components/schemas/ContactRequest"
+              },
+              "example": {
+                "mobile_number": "+918000000099"
+              }
             }
           }
         },
         "responses": {
-          "200": { "description": "Vendor updated" },
-          "400": { "description": "Validation failed" },
-          "404": { "description": "Vendor not found" }
+          "200": {
+            "description": "Vendor updated"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Vendor not found"
+          }
         }
       },
       "delete": {
-        "tags": ["Vendors"],
+        "tags": [
+          "Vendors"
+        ],
         "summary": "Delete vendor",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/IdPath" }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
         "responses": {
-          "200": { "description": "Vendor deleted" },
-          "404": { "description": "Vendor not found" }
+          "200": {
+            "description": "Vendor deleted"
+          },
+          "404": {
+            "description": "Vendor not found"
+          }
         }
       }
     },
     "/api/products": {
       "get": {
-        "tags": ["Products"],
+        "tags": [
+          "Products"
+        ],
         "summary": "List products",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/SearchQuery" },
-          { "$ref": "#/components/parameters/LimitQuery" },
-          { "$ref": "#/components/parameters/OffsetQuery" }
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
         ],
         "responses": {
-          "200": { "description": "Product list" },
-          "401": { "description": "Unauthorized" },
-          "403": { "description": "Forbidden" }
+          "200": {
+            "description": "Product list"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
         }
       },
       "post": {
-        "tags": ["Products"],
+        "tags": [
+          "Products"
+        ],
         "summary": "Create product",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/ProductRequest" },
+              "schema": {
+                "$ref": "#/components/schemas/ProductRequest"
+              },
               "example": {
                 "name": "Lighting Frame",
                 "sales_price": 10,
@@ -423,52 +639,1044 @@
           }
         },
         "responses": {
-          "201": { "description": "Product created" },
-          "400": { "description": "Validation failed" },
-          "401": { "description": "Unauthorized" },
-          "403": { "description": "Forbidden" }
+          "201": {
+            "description": "Product created"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
         }
       }
     },
     "/api/products/{id}": {
       "get": {
-        "tags": ["Products"],
+        "tags": [
+          "Products"
+        ],
         "summary": "Get product",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/IdPath" }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
         "responses": {
-          "200": { "description": "Product details" },
-          "404": { "description": "Product not found" }
+          "200": {
+            "description": "Product details"
+          },
+          "404": {
+            "description": "Product not found"
+          }
         }
       },
       "patch": {
-        "tags": ["Products"],
+        "tags": [
+          "Products"
+        ],
         "summary": "Update product",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/IdPath" }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/ProductRequest" },
-              "example": { "sales_price": 12, "cost_price": 9 }
+              "schema": {
+                "$ref": "#/components/schemas/ProductRequest"
+              },
+              "example": {
+                "sales_price": 12,
+                "cost_price": 9
+              }
             }
           }
         },
         "responses": {
-          "200": { "description": "Product updated" },
-          "400": { "description": "Validation failed" },
-          "404": { "description": "Product not found" }
+          "200": {
+            "description": "Product updated"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Product not found"
+          }
         }
       },
       "delete": {
-        "tags": ["Products"],
+        "tags": [
+          "Products"
+        ],
         "summary": "Delete product",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "$ref": "#/components/parameters/IdPath" }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
         "responses": {
-          "200": { "description": "Product deleted" },
-          "404": { "description": "Product not found" }
+          "200": {
+            "description": "Product deleted"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        }
+      }
+    },
+    "/api/sales-orders": {
+      "get": {
+        "tags": [
+          "Sales Orders"
+        ],
+        "summary": "List sales orders",
+        "description": "Supports list, search, dashboard filters, my orders, late orders, and kanban-style status filtering.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Draft",
+                "Confirmed",
+                "Partially Delivered",
+                "Fully Delivered",
+                "Cancelled"
+              ]
+            }
+          },
+          {
+            "name": "mine",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "late",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales order list"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Sales Orders"
+        ],
+        "summary": "Create sales order in Draft status",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesOrderRequest"
+              },
+              "example": {
+                "customer_id": 1,
+                "customer_address": "Mumbai, Maharashtra",
+                "sales_person_id": 1,
+                "scheduled_date": "2026-06-14T10:00:00.000Z",
+                "items": [
+                  {
+                    "product_id": 1,
+                    "ordered_qty": 5
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sales Order created"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/sales-orders/dashboard-counts": {
+      "get": {
+        "tags": [
+          "Sales Orders"
+        ],
+        "summary": "Get sales order dashboard counts",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales Order dashboard counts"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/sales-orders/{id}": {
+      "get": {
+        "tags": [
+          "Sales Orders"
+        ],
+        "summary": "Get sales order with lines and availability",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales Order details"
+          },
+          "404": {
+            "description": "Sales Order not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Sales Orders"
+        ],
+        "summary": "Update Draft sales order",
+        "description": "Only Draft Sales Orders can be edited. Confirmed orders become readonly except delivery quantities through the deliver action.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesOrderRequest"
+              },
+              "example": {
+                "scheduled_date": "2026-06-15T10:00:00.000Z",
+                "items": [
+                  {
+                    "product_id": 1,
+                    "ordered_qty": 8,
+                    "sales_unit_price": 12
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sales Order updated"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Sales Order not found"
+          },
+          "409": {
+            "description": "Sales Order status does not allow editing"
+          }
+        }
+      }
+    },
+    "/api/sales-orders/{id}/confirm": {
+      "post": {
+        "tags": [
+          "Sales Orders"
+        ],
+        "summary": "Confirm Draft sales order",
+        "description": "Changes status from Draft to Confirmed and writes an audit log.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales Order updated by action"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Sales Order not found"
+          },
+          "409": {
+            "description": "Sales Order status does not allow this action"
+          }
+        }
+      }
+    },
+    "/api/sales-orders/{id}/deliver": {
+      "post": {
+        "tags": [
+          "Sales Orders"
+        ],
+        "summary": "Deliver sales order quantities",
+        "description": "Sets delivered quantities, changes status to Partially Delivered or Fully Delivered, decreases product stock, creates stock ledger rows, and writes audit logs.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesOrderDeliveryRequest"
+              },
+              "example": {
+                "items": [
+                  {
+                    "item_id": 1,
+                    "delivered_qty": 5
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sales Order updated by action"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Sales Order not found"
+          },
+          "409": {
+            "description": "Sales Order status does not allow this action"
+          }
+        }
+      }
+    },
+    "/api/sales-orders/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Sales Orders"
+        ],
+        "summary": "Cancel open sales order",
+        "description": "Cancels a Draft, Confirmed, or Partially Delivered Sales Order and writes an audit log.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales Order updated by action"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Sales Order not found"
+          },
+          "409": {
+            "description": "Sales Order status does not allow this action"
+          }
+        }
+      }
+    },
+    "/api/purchase-orders": {
+      "get": {
+        "tags": [
+          "Purchase Orders"
+        ],
+        "summary": "List purchase orders",
+        "description": "Supports list, search, dashboard filters, my orders, late orders, and kanban-style status filtering.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Draft",
+                "Confirmed",
+                "Partially Received",
+                "Fully Received",
+                "Cancelled"
+              ]
+            }
+          },
+          {
+            "name": "mine",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "late",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Purchase order list"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Purchase Orders"
+        ],
+        "summary": "Create purchase order in Draft status",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurchaseOrderRequest"
+              },
+              "example": {
+                "vendor_id": 1,
+                "vendor_address": "Nashik, Maharashtra",
+                "responsible_user_id": 1,
+                "scheduled_date": "2026-06-14T10:00:00.000Z",
+                "items": [
+                  {
+                    "product_id": 1,
+                    "ordered_qty": 10
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Purchase Order created"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/purchase-orders/dashboard-counts": {
+      "get": {
+        "tags": [
+          "Purchase Orders"
+        ],
+        "summary": "Get purchase order dashboard counts",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Purchase Order dashboard counts"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/purchase-orders/{id}": {
+      "get": {
+        "tags": [
+          "Purchase Orders"
+        ],
+        "summary": "Get purchase order with lines",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Purchase Order details"
+          },
+          "404": {
+            "description": "Purchase Order not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Purchase Orders"
+        ],
+        "summary": "Update Draft purchase order",
+        "description": "Only Draft Purchase Orders can be edited. Confirmed orders become readonly except received quantities through the receive action.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurchaseOrderRequest"
+              },
+              "example": {
+                "scheduled_date": "2026-06-15T10:00:00.000Z",
+                "items": [
+                  {
+                    "product_id": 1,
+                    "ordered_qty": 12,
+                    "cost_price": 8
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purchase Order updated"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Purchase Order not found"
+          },
+          "409": {
+            "description": "Purchase Order status does not allow editing"
+          }
+        }
+      }
+    },
+    "/api/purchase-orders/{id}/confirm": {
+      "post": {
+        "tags": [
+          "Purchase Orders"
+        ],
+        "summary": "Confirm Draft purchase order",
+        "description": "Changes status from Draft to Confirmed and writes an audit log.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Purchase Order updated by action"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Purchase Order not found"
+          },
+          "409": {
+            "description": "Purchase Order status does not allow this action"
+          }
+        }
+      }
+    },
+    "/api/purchase-orders/{id}/receive": {
+      "post": {
+        "tags": [
+          "Purchase Orders"
+        ],
+        "summary": "Receive purchase order quantities",
+        "description": "Sets received quantities, changes status to Partially Received or Fully Received, increases product stock, creates stock ledger rows, and writes audit logs.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurchaseOrderReceiptRequest"
+              },
+              "example": {
+                "items": [
+                  {
+                    "item_id": 1,
+                    "received_qty": 10
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purchase Order updated by action"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Purchase Order not found"
+          },
+          "409": {
+            "description": "Purchase Order status does not allow this action"
+          }
+        }
+      }
+    },
+    "/api/purchase-orders/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Purchase Orders"
+        ],
+        "summary": "Cancel open purchase order",
+        "description": "Cancels a Draft, Confirmed, or Partially Received Purchase Order and writes an audit log.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Purchase Order updated by action"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Purchase Order not found"
+          },
+          "409": {
+            "description": "Purchase Order status does not allow this action"
+          }
+        }
+      }
+    },
+    "/api/boms/work-centers": {
+      "get": {
+        "tags": [
+          "Work Centers"
+        ],
+        "summary": "List work centers",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Work center list"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Work Centers"
+        ],
+        "summary": "Create work center",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkCenterRequest"
+              },
+              "example": {
+                "name": "Assembly-1",
+                "description": "Main assembly station"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Work Center created"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/boms": {
+      "get": {
+        "tags": [
+          "Bills of Materials"
+        ],
+        "summary": "List bills of materials",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "name": "finished_product_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bill of Materials list"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Bills of Materials"
+        ],
+        "summary": "Create bill of materials",
+        "description": "Creates a BOM template with components and operations for later use on Manufacturing Orders.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BomRequest"
+              },
+              "example": {
+                "finished_product_id": 1,
+                "quantity": 1,
+                "unit": "Units",
+                "components": [
+                  {
+                    "component_product_id": 2,
+                    "to_consume_qty": 2,
+                    "unit": "Units"
+                  }
+                ],
+                "operations": [
+                  {
+                    "operation_name": "Assembly-1",
+                    "work_center_id": 1,
+                    "expected_duration_minutes": 10,
+                    "sequence_no": 1
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bill of Materials created"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/boms/{id}": {
+      "get": {
+        "tags": [
+          "Bills of Materials"
+        ],
+        "summary": "Get bill of materials with components and operations",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bill of Materials details"
+          },
+          "404": {
+            "description": "Bill of Materials not found"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Bills of Materials"
+        ],
+        "summary": "Update bill of materials",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BomRequest"
+              },
+              "example": {
+                "quantity": 2,
+                "components": [
+                  {
+                    "component_product_id": 2,
+                    "to_consume_qty": 4,
+                    "unit": "Units"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bill of Materials updated"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "404": {
+            "description": "Bill of Materials not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Bills of Materials"
+        ],
+        "summary": "Delete bill of materials",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bill of Materials deleted"
+          },
+          "404": {
+            "description": "Bill of Materials not found"
+          }
         }
       }
     }
@@ -534,7 +1742,12 @@
       },
       "SignupRequest": {
         "type": "object",
-        "required": ["login_id", "email", "password", "full_name"],
+        "required": [
+          "login_id",
+          "email",
+          "password",
+          "full_name"
+        ],
         "properties": {
           "login_id": {
             "type": "string",
@@ -572,7 +1785,10 @@
       },
       "LoginRequest": {
         "type": "object",
-        "required": ["login_id", "password"],
+        "required": [
+          "login_id",
+          "password"
+        ],
         "properties": {
           "login_id": {
             "type": "string"
@@ -584,7 +1800,9 @@
       },
       "ContactRequest": {
         "type": "object",
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "properties": {
           "name": {
             "type": "string",
@@ -609,7 +1827,9 @@
       },
       "ProductRequest": {
         "type": "object",
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "properties": {
           "name": {
             "type": "string",
@@ -633,7 +1853,10 @@
           "procurement_method": {
             "type": "string",
             "nullable": true,
-            "enum": ["purchase", "manufacturing"]
+            "enum": [
+              "purchase",
+              "manufacturing"
+            ]
           },
           "vendor_id": {
             "type": "integer",
@@ -776,6 +1999,286 @@
                   "type": "object"
                 }
               }
+            }
+          }
+        }
+      },
+      "SalesOrderItemRequest": {
+        "type": "object",
+        "required": [
+          "product_id",
+          "ordered_qty"
+        ],
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "ordered_qty": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "sales_unit_price": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Optional. Defaults from Product Sales Price."
+          }
+        }
+      },
+      "SalesOrderRequest": {
+        "type": "object",
+        "required": [
+          "customer_id",
+          "sales_person_id",
+          "items"
+        ],
+        "properties": {
+          "customer_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "customer_address": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 255
+          },
+          "sales_person_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "scheduled_date": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/SalesOrderItemRequest"
+            }
+          }
+        }
+      },
+      "SalesOrderDeliveryRequest": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "item_id",
+                "delivered_qty"
+              ],
+              "properties": {
+                "item_id": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "delivered_qty": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Absolute delivered quantity for the sales order line."
+                }
+              }
+            }
+          }
+        }
+      },
+      "PurchaseOrderItemRequest": {
+        "type": "object",
+        "required": [
+          "product_id",
+          "ordered_qty"
+        ],
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "ordered_qty": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "cost_price": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Optional. Defaults from Product Cost Price."
+          }
+        }
+      },
+      "PurchaseOrderRequest": {
+        "type": "object",
+        "required": [
+          "vendor_id",
+          "responsible_user_id",
+          "items"
+        ],
+        "properties": {
+          "vendor_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "vendor_address": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 255
+          },
+          "responsible_user_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "scheduled_date": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "source_sales_order_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/PurchaseOrderItemRequest"
+            }
+          }
+        }
+      },
+      "PurchaseOrderReceiptRequest": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "item_id",
+                "received_qty"
+              ],
+              "properties": {
+                "item_id": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "received_qty": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Absolute received quantity for the purchase order line."
+                }
+              }
+            }
+          }
+        }
+      },
+      "WorkCenterRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 255
+          }
+        }
+      },
+      "BomComponentRequest": {
+        "type": "object",
+        "required": [
+          "component_product_id",
+          "to_consume_qty"
+        ],
+        "properties": {
+          "component_product_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "to_consume_qty": {
+            "type": "number",
+            "minimum": 0
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 30,
+            "default": "Units"
+          }
+        }
+      },
+      "BomOperationRequest": {
+        "type": "object",
+        "required": [
+          "operation_name",
+          "work_center_id"
+        ],
+        "properties": {
+          "operation_name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "work_center_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expected_duration_minutes": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "sequence_no": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "BomRequest": {
+        "type": "object",
+        "required": [
+          "finished_product_id"
+        ],
+        "properties": {
+          "finished_product_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "default": 1
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 30,
+            "default": "Units"
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BomComponentRequest"
+            }
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BomOperationRequest"
             }
           }
         }

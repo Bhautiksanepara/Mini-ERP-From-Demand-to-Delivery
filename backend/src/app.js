@@ -4,10 +4,14 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const authRoutes = require('./routes/auth.routes');
+const bomRoutes = require('./routes/bom.routes');
 const customerRoutes = require('./routes/customer.routes');
 const healthRoutes = require('./routes/health.routes');
+const manufacturingOrderRoutes = require('./routes/manufacturing-order.routes');
 const permissionRoutes = require('./routes/permission.routes');
 const productRoutes = require('./routes/product.routes');
+const purchaseOrderRoutes = require('./routes/purchase-order.routes');
+const salesOrderRoutes = require('./routes/sales-order.routes');
 const vendorRoutes = require('./routes/vendor.routes');
 const { errorHandler, notFoundHandler } = require('./middlewares/error.middleware');
 
@@ -27,10 +31,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api', apiLimiter);
 
 app.use('/api/auth', authRoutes);
+app.use('/api/boms', bomRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/health', healthRoutes);
+app.use('/api/manufacturing-orders', manufacturingOrderRoutes);
 app.use('/api/permissions', permissionRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/purchase-orders', purchaseOrderRoutes);
+app.use('/api/sales-orders', salesOrderRoutes);
 app.use('/api/vendors', vendorRoutes);
 
 app.use(notFoundHandler);
