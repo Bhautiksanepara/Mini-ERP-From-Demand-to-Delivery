@@ -14,6 +14,16 @@ const pool = mysql.createPool({
   timezone: 'Z'
 });
 
+function getDatabaseConfigSummary() {
+  return {
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT || 3303),
+    user: process.env.DB_USER || 'root',
+    database: process.env.DB_NAME || 'mini_erp',
+    connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10)
+  };
+}
+
 async function testConnection() {
   const connection = await pool.getConnection();
 
@@ -27,5 +37,6 @@ async function testConnection() {
 
 module.exports = {
   pool,
+  getDatabaseConfigSummary,
   testConnection
 };

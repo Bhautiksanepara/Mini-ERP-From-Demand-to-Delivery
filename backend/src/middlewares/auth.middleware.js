@@ -19,10 +19,10 @@ const authenticate = asyncHandler(async (req, res, next) => {
   }
 
   req.user = {
-    id: user.id,
+    id: Number(user.id),
     login_id: user.login_id,
     email: user.email,
-    roles: payload.roles || []
+    roles: Array.isArray(payload.roles) ? payload.roles : []
   };
 
   next();
