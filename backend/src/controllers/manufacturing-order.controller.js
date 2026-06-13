@@ -47,7 +47,8 @@ const getManufacturingOrder = asyncHandler(async (req, res) => {
 });
 
 const createManufacturingOrder = asyncHandler(async (req, res) => {
-  const manufacturingOrderId = await manufacturingOrderModel.create(req.body, req.user.id);
+  const isAdmin = req.user.roles.some((role) => role.code === 'admin');
+  const manufacturingOrderId = await manufacturingOrderModel.create(req.body, req.user.id, null, isAdmin);
   const manufacturingOrder = await manufacturingOrderModel.findById(manufacturingOrderId);
 
   await auditLogModel.createAuditLog({
@@ -74,7 +75,8 @@ const updateManufacturingOrder = asyncHandler(async (req, res) => {
     throw new AppError('Manufacturing Order not found', 404);
   }
 
-  await manufacturingOrderModel.update(req.params.id, req.body);
+  const isAdmin = req.user.roles.some((role) => role.code === 'admin');
+  await manufacturingOrderModel.update(req.params.id, req.body, isAdmin);
 
   const manufacturingOrder = await manufacturingOrderModel.findById(req.params.id);
   const logs = buildFieldChangeLogs({

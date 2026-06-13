@@ -109,7 +109,7 @@ function collectLookupResults(results, initialLookups) {
   };
 }
 
-function OrderEntryForm({ config, moduleKey, onCreated }) {
+function OrderEntryForm({ config, moduleKey, onCreated, onClose }) {
   const isSales = moduleKey === 'sales';
   const partyKey = isSales ? 'customer_id' : 'vendor_id';
   const addressKey = isSales ? 'customer_address' : 'vendor_address';
@@ -194,6 +194,7 @@ function OrderEntryForm({ config, moduleKey, onCreated }) {
     setErrors({});
     setMessage('');
     setSelectedRecord(null);
+    onClose?.();
   }
 
   function validate() {
@@ -353,7 +354,7 @@ function OrderEntryForm({ config, moduleKey, onCreated }) {
   );
 }
 
-function ManufacturingOrderForm({ config, onCreated }) {
+function ManufacturingOrderForm({ config, onCreated, onClose }) {
   const initialForm = {
     finished_product_id: '',
     quantity: '1',
@@ -420,6 +421,7 @@ function ManufacturingOrderForm({ config, onCreated }) {
     setErrors({});
     setMessage('');
     setSelectedRecord(null);
+    onClose?.();
   }
 
   function validate() {
@@ -621,7 +623,7 @@ function ManufacturingOrderForm({ config, onCreated }) {
   );
 }
 
-function BomForm({ config, onCreated }) {
+function BomForm({ config, onCreated, onClose }) {
   const initialForm = {
     finished_product_id: '',
     quantity: '1',
@@ -681,6 +683,7 @@ function BomForm({ config, onCreated }) {
     setErrors({});
     setMessage('');
     setSelectedRecord(null);
+    onClose?.();
   }
 
   function validate() {
@@ -860,17 +863,17 @@ function LineEditor({ addLabel, children, items, onAdd, onRemove, title }) {
   );
 }
 
-export function FormPreview({ config, moduleKey, onCreated }) {
+export function FormPreview({ config, moduleKey, onCreated, onClose }) {
   if (moduleKey === 'sales' || moduleKey === 'purchase') {
-    return <OrderEntryForm config={config} moduleKey={moduleKey} onCreated={onCreated} />;
+    return <OrderEntryForm config={config} moduleKey={moduleKey} onCreated={onCreated} onClose={onClose} />;
   }
 
   if (moduleKey === 'manufacturing') {
-    return <ManufacturingOrderForm config={config} onCreated={onCreated} />;
+    return <ManufacturingOrderForm config={config} onCreated={onCreated} onClose={onClose} />;
   }
 
   if (moduleKey === 'boms') {
-    return <BomForm config={config} onCreated={onCreated} />;
+    return <BomForm config={config} onCreated={onCreated} onClose={onClose} />;
   }
 
   return null;

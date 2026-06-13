@@ -34,6 +34,7 @@ const createSalesOrderSchema = z.object({
     customer_address: z.string().trim().max(255).optional().nullable(),
     sales_person_id: z.coerce.number().int().positive(),
     scheduled_date: z.string().datetime().optional().nullable(),
+    status: z.enum(['Draft', 'Confirmed', 'Partially Delivered', 'Fully Delivered', 'Cancelled']).optional(),
     items: z.array(salesOrderItemSchema).min(1, 'At least one product is required')
   }),
   params: z.object({}).optional(),
@@ -49,6 +50,7 @@ const updateSalesOrderSchema = z.object({
     customer_address: z.string().trim().max(255).optional().nullable(),
     sales_person_id: z.coerce.number().int().positive().optional(),
     scheduled_date: z.string().datetime().optional().nullable(),
+    status: z.enum(['Draft', 'Confirmed', 'Partially Delivered', 'Fully Delivered', 'Cancelled']).optional(),
     items: z.array(salesOrderItemSchema).min(1).optional()
   }).refine((value) => Object.keys(value).length > 0, {
     message: 'At least one field is required'

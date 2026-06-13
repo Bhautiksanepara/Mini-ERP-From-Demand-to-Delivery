@@ -35,6 +35,7 @@ const createPurchaseOrderSchema = z.object({
     responsible_user_id: z.coerce.number().int().positive(),
     scheduled_date: z.string().datetime().optional().nullable(),
     source_sales_order_id: z.coerce.number().int().positive().optional().nullable(),
+    status: z.enum(['Draft', 'Confirmed', 'Partially Received', 'Fully Received', 'Cancelled']).optional(),
     items: z.array(purchaseOrderItemSchema).min(1, 'At least one product is required')
   }),
   params: z.object({}).optional(),
@@ -51,6 +52,7 @@ const updatePurchaseOrderSchema = z.object({
     responsible_user_id: z.coerce.number().int().positive().optional(),
     scheduled_date: z.string().datetime().optional().nullable(),
     source_sales_order_id: z.coerce.number().int().positive().optional().nullable(),
+    status: z.enum(['Draft', 'Confirmed', 'Partially Received', 'Fully Received', 'Cancelled']).optional(),
     items: z.array(purchaseOrderItemSchema).min(1).optional()
   }).refine((value) => Object.keys(value).length > 0, {
     message: 'At least one field is required'

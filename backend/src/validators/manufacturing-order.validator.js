@@ -45,6 +45,7 @@ const manufacturingPayload = {
   assignee_id: z.coerce.number().int().positive().optional().nullable(),
   bom_id: z.coerce.number().int().positive().optional().nullable(),
   source_sales_order_id: z.coerce.number().int().positive().optional().nullable(),
+  status: z.enum(['Draft', 'Confirmed', 'In Progress', 'Done', 'Cancelled']).optional(),
   components: z.array(manufacturingComponentSchema).optional(),
   work_orders: z.array(manufacturingWorkOrderSchema).optional()
 };

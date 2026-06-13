@@ -2,6 +2,7 @@ import { Boxes, Menu, Plus, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../components/common/Button';
 import { DataTable } from '../components/common/DataTable';
+import { Modal } from '../components/common/Modal';
 import { FormPreview } from '../components/modules/FormPreview';
 import { KanbanBoard } from '../components/modules/KanbanBoard';
 import { StatusStrip } from '../components/modules/StatusStrip';
@@ -82,6 +83,11 @@ export function ModulePage({ moduleKey, config, searchTerm = '' }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  useEffect(() => {
+    setIsFormOpen(false);
+  }, [moduleKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -123,7 +129,11 @@ export function ModulePage({ moduleKey, config, searchTerm = '' }) {
   return (
     <main className="grid gap-5 p-6 max-md:p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <Button className="min-w-24"><Plus size={17} />New</Button>
+        {['sales', 'purchase', 'manufacturing', 'boms'].includes(moduleKey) && (
+          <Button className="min-w-24" onClick={() => setIsFormOpen(true)}>
+            <Plus size={17} />New
+          </Button>
+        )}
         <Button disabled={loading} variant="subtle" onClick={() => setReloadKey((value) => value + 1)}>
           <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />Refresh
         </Button>
@@ -146,7 +156,14 @@ export function ModulePage({ moduleKey, config, searchTerm = '' }) {
       ) : (
         <DataTable columns={config.columns} loading={loading} rows={displayRows} />
       )}
-      <FormPreview config={config} moduleKey={moduleKey} onCreated={() => setReloadKey((value) => value + 1)} />
+      <Modal isOpen={isFormOpen} onClose={() => setIsFormOpen(false)}>
+        <FormPreview
+          config={config}
+          moduleKey={moduleKey}
+          onCreated={() => setReloadKey((value) => value + 1)}
+          onClose={() => setIsFormOpen(false)}
+        />
+      </Modal>
     </main>
   );
 }

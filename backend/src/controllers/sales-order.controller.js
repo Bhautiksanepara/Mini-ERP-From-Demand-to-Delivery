@@ -43,7 +43,8 @@ const getSalesOrder = asyncHandler(async (req, res) => {
 });
 
 const createSalesOrder = asyncHandler(async (req, res) => {
-  const salesOrderId = await salesOrderModel.create(req.body, req.user.id);
+  const isAdmin = req.user.roles.some((role) => role.code === 'admin');
+  const salesOrderId = await salesOrderModel.create(req.body, req.user.id, isAdmin);
   const salesOrder = await salesOrderModel.findById(salesOrderId);
 
   await auditLogModel.createAuditLog({
@@ -70,7 +71,8 @@ const updateSalesOrder = asyncHandler(async (req, res) => {
     throw new AppError('Sales Order not found', 404);
   }
 
-  await salesOrderModel.update(req.params.id, req.body);
+  const isAdmin = req.user.roles.some((role) => role.code === 'admin');
+  await salesOrderModel.update(req.params.id, req.body, isAdmin);
 
   const salesOrder = await salesOrderModel.findById(req.params.id);
   const logs = buildFieldChangeLogs({

@@ -44,7 +44,8 @@ const getPurchaseOrder = asyncHandler(async (req, res) => {
 });
 
 const createPurchaseOrder = asyncHandler(async (req, res) => {
-  const purchaseOrderId = await purchaseOrderModel.create(req.body, req.user.id);
+  const isAdmin = req.user.roles.some((role) => role.code === 'admin');
+  const purchaseOrderId = await purchaseOrderModel.create(req.body, req.user.id, null, isAdmin);
   const purchaseOrder = await purchaseOrderModel.findById(purchaseOrderId);
 
   await auditLogModel.createAuditLog({
@@ -71,7 +72,8 @@ const updatePurchaseOrder = asyncHandler(async (req, res) => {
     throw new AppError('Purchase Order not found', 404);
   }
 
-  await purchaseOrderModel.update(req.params.id, req.body);
+  const isAdmin = req.user.roles.some((role) => role.code === 'admin');
+  await purchaseOrderModel.update(req.params.id, req.body, isAdmin);
 
   const purchaseOrder = await purchaseOrderModel.findById(req.params.id);
   const logs = buildFieldChangeLogs({

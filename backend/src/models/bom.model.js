@@ -60,7 +60,7 @@ async function list(filters = {}) {
   const limit = Math.min(Number(filters.limit || 50), 200);
   const offset = Number(filters.offset || 0);
 
-  const [rows] = await pool.execute(
+  const [rows] = await pool.query(
     `SELECT ${bomColumns}
      FROM boms b
      INNER JOIN products p ON p.id = b.finished_product_id
@@ -376,7 +376,7 @@ async function listWorkCenters(filters = {}) {
   const limit = Math.min(Number(filters.limit || 50), 200);
   const offset = Number(filters.offset || 0);
 
-  const [rows] = await pool.execute(
+  const [rows] = await pool.query(
     `SELECT id, name, description, created_at, updated_at
      FROM work_centers
      WHERE ${where.join(' AND ')}
