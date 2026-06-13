@@ -1,6 +1,7 @@
 const { pool } = require('../config/database');
 const { AppError } = require('../utils/app-error');
 const { generateReference } = require('../utils/reference');
+const { applyStockMovement } = require('../utils/stock-ledger');
 
 const purchaseOrderColumns = `
   po.id,
@@ -90,7 +91,7 @@ async function list(filters = {}) {
   const limit = Math.min(Number(filters.limit || 50), 200);
   const offset = Number(filters.offset || 0);
 
-  const [rows] = await pool.execute(
+  const [rows] = await pool.query(
     `SELECT ${purchaseOrderColumns}
      FROM purchase_orders po
      INNER JOIN vendors v ON v.id = po.vendor_id
@@ -249,11 +250,14 @@ async function replaceItems(orderId, items, connection) {
   }
 }
 
-async function create(payload, userId) {
-  const connection = await pool.getConnection();
+async function create(payload, userId, externalConnection = null) {
+  const connection = externalConnection || await pool.getConnection();
+  const manageTransaction = !externalConnection;
 
   try {
-    await connection.beginTransaction();
+    if (manageTransaction) {
+      await connection.beginTransaction();
+    }
 
     const reference = await generateReference('purchase_order', connection);
     const vendorAddress = await resolveVendorAddress(
@@ -283,14 +287,21 @@ async function create(payload, userId) {
     );
 
     await replaceItems(result.insertId, payload.items, connection);
-    await connection.commit();
+
+    if (manageTransaction) {
+      await connection.commit();
+    }
 
     return result.insertId;
   } catch (error) {
-    await connection.rollback();
+    if (manageTransaction) {
+      await connection.rollback();
+    }
     throw error;
   } finally {
-    connection.release();
+    if (manageTransaction) {
+      connection.release();
+    }
   }
 }
 
@@ -452,32 +463,16 @@ async function receive(id, payload, userId) {
         [receivedQty, itemId, id]
       );
 
-      await connection.execute(
-        `UPDATE products
-         SET on_hand_qty = on_hand_qty + ?
-         WHERE id = ?
-           AND deleted_at IS NULL`,
-        [delta, currentItem.product_id]
-      );
-
-      await connection.execute(
-        `INSERT INTO stock_ledger (
-          product_id,
-          movement_type,
-          quantity_change,
-          reference_type,
-          reference_id,
-          note,
-          created_by
-        ) VALUES (?, 'purchase_receipt', ?, 'Purchase Order', ?, ?, ?)`,
-        [
-          currentItem.product_id,
-          delta,
-          id,
-          `Received from ${order.reference}`,
-          userId
-        ]
-      );
+      await applyStockMovement({
+        connection,
+        productId: currentItem.product_id,
+        movementType: 'purchase_receipt',
+        quantityChange: delta,
+        referenceType: 'Purchase Order',
+        referenceId: id,
+        note: `Received from ${order.reference}`,
+        userId
+      });
     }
 
     if (!hasIncrease) {

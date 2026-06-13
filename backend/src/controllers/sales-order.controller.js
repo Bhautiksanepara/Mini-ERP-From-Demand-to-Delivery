@@ -116,7 +116,7 @@ const confirmSalesOrder = asyncHandler(async (req, res) => {
     throw new AppError('Sales Order not found', 404);
   }
 
-  await salesOrderModel.confirm(req.params.id);
+  await salesOrderModel.confirm(req.params.id, req.user.id);
 
   const salesOrder = await salesOrderModel.findById(req.params.id);
 

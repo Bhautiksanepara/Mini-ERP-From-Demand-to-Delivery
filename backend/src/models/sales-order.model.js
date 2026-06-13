@@ -1,6 +1,7 @@
 const { pool } = require('../config/database');
 const { AppError } = require('../utils/app-error');
 const { generateReference } = require('../utils/reference');
+const { applyStockMovement } = require('../utils/stock-ledger');
 
 const salesOrderColumns = `
   so.id,
@@ -92,7 +93,7 @@ async function list(filters = {}) {
   const limit = Math.min(Number(filters.limit || 50), 200);
   const offset = Number(filters.offset || 0);
 
-  const [rows] = await pool.execute(
+  const [rows] = await pool.query(
     `SELECT ${salesOrderColumns}
      FROM sales_orders so
      INNER JOIN customers c ON c.id = so.customer_id
@@ -353,7 +354,7 @@ async function update(id, payload) {
   }
 }
 
-async function confirm(id) {
+async function confirm(id, userId) {
   const connection = await pool.getConnection();
 
   try {
@@ -363,6 +364,90 @@ async function confirm(id) {
 
     if (order.status !== 'Draft') {
       throw new AppError('Only Draft Sales Orders can be confirmed', 409);
+    }
+
+    const items = await findItemsByOrderId(id, connection);
+    if (items.length > 0) {
+      const productIds = items.map((item) => Number(item.product_id));
+      const placeholders = productIds.map(() => '?').join(', ');
+      
+      const [productRows] = await connection.execute(
+        `SELECT p.id, p.name, p.procure_on_demand, p.procurement_method, p.vendor_id, p.bom_id, p.cost_price,
+                COALESCE(inv.free_to_use_qty, p.on_hand_qty) AS free_to_use_qty
+         FROM products p
+         LEFT JOIN product_inventory_summary inv ON inv.product_id = p.id
+         WHERE p.id IN (${placeholders})
+           AND p.deleted_at IS NULL`,
+        productIds
+      );
+      
+      const productMap = new Map(productRows.map((p) => [Number(p.id), p]));
+      const purchaseShortagesByVendor = new Map();
+      const manufacturingShortages = [];
+
+      for (const item of items) {
+        const product = productMap.get(Number(item.product_id));
+        if (!product) continue;
+
+        const freeToUse = Number(product.free_to_use_qty);
+        const ordered = Number(item.ordered_qty);
+        const available = Math.max(0, freeToUse);
+        const shortage = ordered - available;
+
+        if (shortage > 0 && product.procure_on_demand) {
+          if (product.procurement_method === 'purchase') {
+            if (!product.vendor_id) {
+              throw new AppError(`Vendor is not configured for procure-on-demand product "${product.name || item.product_name}"`, 400);
+            }
+            const vendorId = Number(product.vendor_id);
+            if (!purchaseShortagesByVendor.has(vendorId)) {
+              purchaseShortagesByVendor.set(vendorId, []);
+            }
+            purchaseShortagesByVendor.get(vendorId).push({
+              product_id: product.id,
+              ordered_qty: shortage,
+              cost_price: product.cost_price
+            });
+          } else if (product.procurement_method === 'manufacturing') {
+            if (!product.bom_id) {
+              throw new AppError(`BoM is not configured for procure-on-demand product "${product.name || item.product_name}"`, 400);
+            }
+            manufacturingShortages.push({
+              finished_product_id: product.id,
+              quantity: shortage,
+              bom_id: product.bom_id
+            });
+          }
+        }
+      }
+
+      // Trigger automatic Purchase Orders
+      if (purchaseShortagesByVendor.size > 0) {
+        const purchaseOrderModel = require('./purchase-order.model');
+        for (const [vendorId, poItems] of purchaseShortagesByVendor.entries()) {
+          const poPayload = {
+            vendor_id: vendorId,
+            responsible_user_id: order.sales_person_id,
+            source_sales_order_id: order.id,
+            items: poItems
+          };
+          await purchaseOrderModel.create(poPayload, userId, connection);
+        }
+      }
+
+      // Trigger automatic Manufacturing Orders
+      if (manufacturingShortages.length > 0) {
+        const manufacturingOrderModel = require('./manufacturing-order.model');
+        for (const moShortage of manufacturingShortages) {
+          const moPayload = {
+            finished_product_id: moShortage.finished_product_id,
+            quantity: moShortage.quantity,
+            bom_id: moShortage.bom_id,
+            source_sales_order_id: order.id
+          };
+          await manufacturingOrderModel.create(moPayload, userId, connection);
+        }
+      }
     }
 
     await connection.execute(
@@ -446,32 +531,16 @@ async function deliver(id, payload, userId) {
         [deliveredQty, itemId, id]
       );
 
-      await connection.execute(
-        `UPDATE products
-         SET on_hand_qty = on_hand_qty - ?
-         WHERE id = ?
-           AND deleted_at IS NULL`,
-        [delta, currentItem.product_id]
-      );
-
-      await connection.execute(
-        `INSERT INTO stock_ledger (
-          product_id,
-          movement_type,
-          quantity_change,
-          reference_type,
-          reference_id,
-          note,
-          created_by
-        ) VALUES (?, 'sales_delivery', ?, 'Sales Order', ?, ?, ?)`,
-        [
-          currentItem.product_id,
-          -delta,
-          id,
-          `Delivered from ${order.reference}`,
-          userId
-        ]
-      );
+      await applyStockMovement({
+        connection,
+        productId: currentItem.product_id,
+        movementType: 'sales_delivery',
+        quantityChange: -delta,
+        referenceType: 'Sales Order',
+        referenceId: id,
+        note: `Delivered from ${order.reference}`,
+        userId
+      });
     }
 
     if (!hasIncrease) {

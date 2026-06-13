@@ -35,6 +35,9 @@
       "name": "Products"
     },
     {
+      "name": "Inventory"
+    },
+    {
       "name": "Sales Orders"
     },
     {
@@ -1679,6 +1682,194 @@
           }
         }
       }
+    },
+    "/api/inventory/summary": {
+      "get": {
+        "tags": [
+          "Inventory"
+        ],
+        "summary": "List inventory summary",
+        "description": "Returns on hand, reserved, and free-to-use quantities from the product inventory summary view.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "name": "low_stock",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "When true, returns products whose free-to-use quantity is below zero."
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inventory summary list"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/inventory/stock-ledger": {
+      "get": {
+        "tags": [
+          "Inventory"
+        ],
+        "summary": "List stock ledger movements",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "movement_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "sales_delivery",
+                "purchase_receipt",
+                "manufacturing_consumption",
+                "manufacturing_production",
+                "manual_adjustment"
+              ]
+            }
+          },
+          {
+            "name": "reference_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reference_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "$ref": "#/components/parameters/OffsetQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stock ledger list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockLedgerListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "description": "Returns stock movements with quantity before, quantity change, quantity after, direction, source reference, and user metadata."
+      }
+    },
+    "/api/inventory/adjustments": {
+      "post": {
+        "tags": [
+          "Inventory"
+        ],
+        "summary": "Create manual inventory adjustment",
+        "description": "Updates product on-hand quantity, inserts a manual stock ledger entry, and writes an audit log for on_hand_qty.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualInventoryAdjustmentRequest"
+              },
+              "example": {
+                "product_id": 1,
+                "quantity_change": 5,
+                "note": "Opening stock correction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Inventory adjusted"
+          },
+          "400": {
+            "description": "Validation failed or quantity would become negative"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2279,6 +2470,112 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BomOperationRequest"
+            }
+          }
+        }
+      },
+      "ManualInventoryAdjustmentRequest": {
+        "type": "object",
+        "required": [
+          "product_id",
+          "quantity_change"
+        ],
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "quantity_change": {
+            "type": "number",
+            "description": "Positive or negative quantity delta. The ledger stores quantity before, quantity after, and IN/OUT direction."
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 255
+          }
+        }
+      },
+      "StockLedgerMovement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "product_id": {
+            "type": "integer"
+          },
+          "product_reference": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "movement_type": {
+            "type": "string",
+            "enum": [
+              "sales_delivery",
+              "purchase_receipt",
+              "manufacturing_consumption",
+              "manufacturing_production",
+              "manual_adjustment"
+            ]
+          },
+          "quantity_before": {
+            "type": "number"
+          },
+          "quantity_change": {
+            "type": "number"
+          },
+          "quantity_after": {
+            "type": "number"
+          },
+          "movement_direction": {
+            "type": "string",
+            "enum": [
+              "IN",
+              "OUT"
+            ]
+          },
+          "reference_type": {
+            "type": "string"
+          },
+          "reference_id": {
+            "type": "integer"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_by": {
+            "type": "integer",
+            "nullable": true
+          },
+          "created_by_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "StockLedgerListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "stock_ledger": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/StockLedgerMovement"
+                }
+              }
             }
           }
         }

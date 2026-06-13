@@ -1,6 +1,7 @@
 const { pool } = require('../config/database');
 const { AppError } = require('../utils/app-error');
 const { generateReference } = require('../utils/reference');
+const { applyStockMovement } = require('../utils/stock-ledger');
 
 const manufacturingOrderColumns = `
   mo.id,
@@ -165,7 +166,7 @@ async function list(filters = {}) {
   const limit = Math.min(Number(filters.limit || 50), 200);
   const offset = Number(filters.offset || 0);
 
-  const [rows] = await pool.execute(
+  const [rows] = await pool.query(
     `SELECT ${manufacturingOrderColumns}
      FROM manufacturing_orders mo
      INNER JOIN products p ON p.id = mo.finished_product_id
@@ -436,11 +437,14 @@ async function replaceWorkOrders(orderId, workOrders = [], connection) {
   }
 }
 
-async function create(payload, userId) {
-  const connection = await pool.getConnection();
+async function create(payload, userId, externalConnection = null) {
+  const connection = externalConnection || await pool.getConnection();
+  const manageTransaction = !externalConnection;
 
   try {
-    await connection.beginTransaction();
+    if (manageTransaction) {
+      await connection.beginTransaction();
+    }
 
     await assertProductsExist([payload.finished_product_id], connection);
 
@@ -493,14 +497,21 @@ async function create(payload, userId) {
 
     await replaceComponents(result.insertId, components, connection);
     await replaceWorkOrders(result.insertId, workOrders, connection);
-    await connection.commit();
+
+    if (manageTransaction) {
+      await connection.commit();
+    }
 
     return result.insertId;
   } catch (error) {
-    await connection.rollback();
+    if (manageTransaction) {
+      await connection.rollback();
+    }
     throw error;
   } finally {
-    connection.release();
+    if (manageTransaction) {
+      connection.release();
+    }
   }
 }
 
@@ -709,32 +720,16 @@ async function produce(id, payload = {}, userId) {
         [consumedQty, componentId, id]
       );
 
-      await connection.execute(
-        `UPDATE products
-         SET on_hand_qty = on_hand_qty - ?
-         WHERE id = ?
-           AND deleted_at IS NULL`,
-        [delta, currentComponent.component_product_id]
-      );
-
-      await connection.execute(
-        `INSERT INTO stock_ledger (
-          product_id,
-          movement_type,
-          quantity_change,
-          reference_type,
-          reference_id,
-          note,
-          created_by
-        ) VALUES (?, 'manufacturing_consumption', ?, 'Manufacturing Order', ?, ?, ?)`,
-        [
-          currentComponent.component_product_id,
-          -delta,
-          id,
-          `Consumed for ${order.reference}`,
-          userId
-        ]
-      );
+      await applyStockMovement({
+        connection,
+        productId: currentComponent.component_product_id,
+        movementType: 'manufacturing_consumption',
+        quantityChange: -delta,
+        referenceType: 'Manufacturing Order',
+        referenceId: id,
+        note: `Consumed for ${order.reference}`,
+        userId
+      });
     }
 
     for (const workOrder of payload.work_orders || []) {
@@ -748,32 +743,16 @@ async function produce(id, payload = {}, userId) {
       );
     }
 
-    await connection.execute(
-      `UPDATE products
-       SET on_hand_qty = on_hand_qty + ?
-       WHERE id = ?
-         AND deleted_at IS NULL`,
-      [order.quantity, order.finished_product_id]
-    );
-
-    await connection.execute(
-      `INSERT INTO stock_ledger (
-        product_id,
-        movement_type,
-        quantity_change,
-        reference_type,
-        reference_id,
-        note,
-        created_by
-      ) VALUES (?, 'manufacturing_production', ?, 'Manufacturing Order', ?, ?, ?)`,
-      [
-        order.finished_product_id,
-        order.quantity,
-        id,
-        `Produced from ${order.reference}`,
-        userId
-      ]
-    );
+    await applyStockMovement({
+      connection,
+      productId: order.finished_product_id,
+      movementType: 'manufacturing_production',
+      quantityChange: order.quantity,
+      referenceType: 'Manufacturing Order',
+      referenceId: id,
+      note: `Produced from ${order.reference}`,
+      userId
+    });
 
     await connection.execute(
       `UPDATE manufacturing_orders

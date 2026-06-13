@@ -3,15 +3,18 @@ const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
+const auditLogRoutes = require('./routes/audit-log.routes');
 const authRoutes = require('./routes/auth.routes');
 const bomRoutes = require('./routes/bom.routes');
 const customerRoutes = require('./routes/customer.routes');
 const healthRoutes = require('./routes/health.routes');
+const inventoryRoutes = require('./routes/inventory.routes');
 const manufacturingOrderRoutes = require('./routes/manufacturing-order.routes');
 const permissionRoutes = require('./routes/permission.routes');
 const productRoutes = require('./routes/product.routes');
 const purchaseOrderRoutes = require('./routes/purchase-order.routes');
 const salesOrderRoutes = require('./routes/sales-order.routes');
+const userRoutes = require('./routes/user.routes');
 const vendorRoutes = require('./routes/vendor.routes');
 const { errorHandler, notFoundHandler } = require('./middlewares/error.middleware');
 
@@ -30,15 +33,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/api', apiLimiter);
 
+app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/boms', bomRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/health', healthRoutes);
+app.use('/api/inventory', inventoryRoutes);
 app.use('/api/manufacturing-orders', manufacturingOrderRoutes);
 app.use('/api/permissions', permissionRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
 app.use('/api/sales-orders', salesOrderRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/vendors', vendorRoutes);
 
 app.use(notFoundHandler);

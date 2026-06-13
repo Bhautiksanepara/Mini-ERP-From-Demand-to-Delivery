@@ -2,6 +2,8 @@
 
 Run `mini_erp_mysql_schema.sql` in DBeaver against a MySQL 8+ connection.
 
+For an existing database, run migration files from `migrations/` in filename order before restarting the backend.
+
 The script creates:
 
 - Core ERP tables for users, products, sales, purchase, manufacturing, BoM, inventory, and audit logs.
@@ -9,6 +11,7 @@ The script creates:
 - Fixed default module and field permissions using seed data.
 - Soft-delete columns using `deleted_at` and `deleted_by`.
 - `product_inventory_summary` view for corrected inventory logic:
+- `stock_ledger` trace fields: quantity before, quantity change, quantity after, and movement direction.
 
 ```text
 Free To Use Qty = On Hand Qty - Reserved Qty

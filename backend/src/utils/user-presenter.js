@@ -3,6 +3,12 @@ function toPublicUser(user) {
     return null;
   }
 
+  const profilePhotoBase64 = user.profile_photo 
+    ? (Buffer.isBuffer(user.profile_photo) 
+        ? user.profile_photo.toString('base64') 
+        : user.profile_photo)
+    : null;
+
   return {
     id: user.id,
     login_id: user.login_id,
@@ -11,6 +17,7 @@ function toPublicUser(user) {
     address: user.address,
     mobile_number: user.mobile_number,
     position: user.position,
+    profile_photo: profilePhotoBase64,
     profile_photo_mime: user.profile_photo_mime,
     is_active: Boolean(user.is_active),
     roles: user.roles || [],

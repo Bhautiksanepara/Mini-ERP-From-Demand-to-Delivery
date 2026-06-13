@@ -65,11 +65,21 @@ async function listAuditLogs(filters = {}) {
     values.push(filters.record_type);
   }
 
+  if (filters.start_date) {
+    where.push('al.created_at >= ?');
+    values.push(filters.start_date);
+  }
+
+  if (filters.end_date) {
+    where.push('al.created_at <= ?');
+    values.push(filters.end_date);
+  }
+
   const limit = Math.min(Number(filters.limit || 50), 200);
   const offset = Number(filters.offset || 0);
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
-  const [rows] = await pool.execute(
+  const [rows] = await pool.query(
     `SELECT
       al.id,
       al.user_id,
@@ -93,8 +103,65 @@ async function listAuditLogs(filters = {}) {
   return rows;
 }
 
+async function getAuditLogStats(filters = {}) {
+  const where = [];
+  const values = [];
+
+  if (filters.module_code) {
+    where.push('module_code = ?');
+    values.push(filters.module_code);
+  }
+
+  if (filters.user_id) {
+    where.push('user_id = ?');
+    values.push(filters.user_id);
+  }
+
+  if (filters.action) {
+    where.push('action = ?');
+    values.push(filters.action);
+  }
+
+  if (filters.record_type) {
+    where.push('record_type = ?');
+    values.push(filters.record_type);
+  }
+
+  if (filters.start_date) {
+    where.push('created_at >= ?');
+    values.push(filters.start_date);
+  }
+
+  if (filters.end_date) {
+    where.push('created_at <= ?');
+    values.push(filters.end_date);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  const [rows] = await pool.execute(
+    `SELECT 
+      COUNT(*) AS total,
+      SUM(CASE WHEN action = 'Created' THEN 1 ELSE 0 END) AS created,
+      SUM(CASE WHEN action = 'Updated' THEN 1 ELSE 0 END) AS updated,
+      SUM(CASE WHEN action = 'Deleted' THEN 1 ELSE 0 END) AS deleted
+     FROM audit_logs
+     ${whereSql}`,
+    values
+  );
+
+  const stats = rows[0];
+  return {
+    total: Number(stats?.total || 0),
+    created: Number(stats?.created || 0),
+    updated: Number(stats?.updated || 0),
+    deleted: Number(stats?.deleted || 0)
+  };
+}
+
 module.exports = {
   createAuditLog,
   createAuditLogs,
-  listAuditLogs
+  listAuditLogs,
+  getAuditLogStats
 };
