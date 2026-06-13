@@ -246,3 +246,53 @@ WHERE code = 'product' AND next_number < 8;
 UPDATE reference_sequences
 SET next_number = 3
 WHERE code = 'bill_of_materials' AND next_number < 3;
+
+
+
+
+USE mini_erp;
+SET FOREIGN_KEY_CHECKS = 0;
+DELETE FROM audit_logs
+WHERE module_code IN ('sales', 'purchase', 'manufacturing');
+DELETE FROM stock_ledger
+WHERE note IN ('Demo purchase receipt', 'Demo production entry');
+DELETE FROM manufacturing_order_work_orders
+WHERE manufacturing_order_id IN (
+    SELECT id FROM manufacturing_orders
+    WHERE reference = 'MO-000001'
+);
+DELETE FROM manufacturing_order_components
+WHERE manufacturing_order_id IN (
+    SELECT id FROM manufacturing_orders
+    WHERE reference = 'MO-000001'
+);
+DELETE FROM purchase_order_items
+WHERE purchase_order_id IN (
+    SELECT id FROM purchase_orders
+    WHERE reference = 'PO-000001'
+);
+DELETE FROM sales_order_items
+WHERE sales_order_id IN (
+    SELECT id FROM sales_orders
+    WHERE reference IN ('SO-000001', 'SO-000002')
+);
+DELETE FROM manufacturing_orders
+WHERE reference = 'MO-000001';
+DELETE FROM purchase_orders
+WHERE reference = 'PO-000001';
+DELETE FROM sales_orders
+WHERE reference IN ('SO-000001', 'SO-000002');
+SET FOREIGN_KEY_CHECKS = 1;
+
+
+UPDATE reference_sequences
+SET next_number = GREATEST(next_number, 3)
+WHERE code = 'sales_order';
+
+UPDATE reference_sequences
+SET next_number = GREATEST(next_number, 2)
+WHERE code = 'purchase_order';
+
+UPDATE reference_sequences
+SET next_number = GREATEST(next_number, 2)
+WHERE code = 'manufacturing_order';

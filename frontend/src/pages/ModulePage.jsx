@@ -146,7 +146,7 @@ export function ModulePage({ moduleKey, config, searchTerm = '' }) {
       ) : (
         <DataTable columns={config.columns} loading={loading} rows={displayRows} />
       )}
-      <FormPreview config={config} />
+      <FormPreview config={config} moduleKey={moduleKey} onCreated={() => setReloadKey((value) => value + 1)} />
     </main>
   );
 }
