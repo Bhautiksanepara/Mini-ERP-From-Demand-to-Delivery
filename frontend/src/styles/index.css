@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+  }
+
+  body {
+    @apply m-0 min-h-screen bg-enterprise-shell text-enterprise-ink antialiased;
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+}
