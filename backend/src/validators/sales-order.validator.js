@@ -24,6 +24,7 @@ const listSalesOrdersSchema = z.object({
 const salesOrderItemSchema = z.object({
   product_id: z.coerce.number().int().positive(),
   ordered_qty: z.coerce.number().positive(),
+  delivered_qty: z.coerce.number().nonnegative().optional(),
   sales_unit_price: z.coerce.number().min(0).optional()
 });
 

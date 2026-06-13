@@ -240,11 +240,12 @@ async function replaceItems(orderId, items, connection) {
         ordered_qty,
         delivered_qty,
         sales_unit_price
-      ) VALUES (?, ?, ?, 0, ?)`,
+      ) VALUES (?, ?, ?, ?, ?)`,
       [
         orderId,
         item.product_id,
         item.ordered_qty,
+        item.delivered_qty || 0,
         item.sales_unit_price ?? priceByProductId.get(Number(item.product_id))
       ]
     );

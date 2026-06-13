@@ -24,6 +24,7 @@ const listPurchaseOrdersSchema = z.object({
 const purchaseOrderItemSchema = z.object({
   product_id: z.coerce.number().int().positive(),
   ordered_qty: z.coerce.number().positive(),
+  received_qty: z.coerce.number().nonnegative().optional(),
   cost_price: z.coerce.number().min(0).optional()
 });
 

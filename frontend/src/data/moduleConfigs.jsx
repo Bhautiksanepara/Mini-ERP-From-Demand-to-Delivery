@@ -63,10 +63,10 @@ export const moduleConfigs = {
       Done: { status: 'Done' },
       Late: { late: true }
     },
-    columns: ['reference', 'schedule_date', 'finished_product_name', 'component_status', 'quantity', 'status'],
+    columns: ['reference', 'schedule_date', 'finished_product_name', 'component_count', 'work_order_count', 'quantity', 'status'],
     sample: [
-      { reference: 'MO-000001', schedule_date: 'Tomorrow', finished_product_name: 'Dining Table', component_status: 'Not Available', quantity: '5.00 Units', status: 'Confirmed' },
-      { reference: 'MO-000002', schedule_date: 'Yesterday', finished_product_name: 'Drawer', component_status: 'Available', quantity: '2.00 Units', status: 'In Progress' }
+      { reference: 'MO-000001', schedule_date: 'Tomorrow', finished_product_name: 'Dining Table', component_count: 3, work_order_count: 3, quantity: '5.00 Units', status: 'Confirmed' },
+      { reference: 'MO-000002', schedule_date: 'Yesterday', finished_product_name: 'Drawer', component_count: 4, work_order_count: 2, quantity: '2.00 Units', status: 'In Progress' }
     ],
     formFields: ['Finished Product', 'Quantity', 'Assignee', 'Bill of Materials', 'Components', 'Work Orders', 'Real Duration']
   },
@@ -76,10 +76,10 @@ export const moduleConfigs = {
     dataKey: 'boms',
     icon: ClipboardList,
     statusLabels: ['All', 'Components', 'Operations'],
-    columns: ['reference', 'finished_product_name', 'quantity', 'components_count', 'operations_count'],
+    columns: ['reference', 'finished_product_name', 'quantity', 'component_count', 'operation_count'],
     sample: [
-      { reference: 'BOM-000001', finished_product_name: 'Dining Table', quantity: '1.00 Units', components_count: 3, operations_count: 3 },
-      { reference: 'BOM-000002', finished_product_name: 'Door Frames', quantity: '1.00 Units', components_count: 4, operations_count: 2 }
+      { reference: 'BOM-000001', finished_product_name: 'Dining Table', quantity: '1.00 Units', component_count: 3, operation_count: 3 },
+      { reference: 'BOM-000002', finished_product_name: 'Door Frames', quantity: '1.00 Units', component_count: 4, operation_count: 2 }
     ],
     formFields: ['Finished Product', 'Quantity', 'Components', 'To Consume Quantity', 'Operations', 'Work Center', 'Expected Duration']
   },

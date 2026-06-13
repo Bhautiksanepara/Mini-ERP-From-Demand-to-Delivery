@@ -239,11 +239,12 @@ async function replaceItems(orderId, items, connection) {
         ordered_qty,
         received_qty,
         cost_price
-      ) VALUES (?, ?, ?, 0, ?)`,
+      ) VALUES (?, ?, ?, ?, ?)`,
       [
         orderId,
         item.product_id,
         item.ordered_qty,
+        item.received_qty || 0,
         item.cost_price ?? costByProductId.get(Number(item.product_id))
       ]
     );
