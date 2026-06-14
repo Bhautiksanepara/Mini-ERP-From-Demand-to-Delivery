@@ -87,17 +87,29 @@ async function getRoleFieldPermissions(roleCodes = []) {
 }
 
 async function getUserPermissionSnapshot(userId) {
-  const [roles] = await pool.execute(
-    `SELECT r.id, r.name, r.code
-     FROM roles r
-     INNER JOIN user_roles ur ON ur.role_id = r.id
-     WHERE ur.user_id = ?
-       AND r.deleted_at IS NULL
-     ORDER BY r.name`,
+  const [userRows] = await pool.execute(
+    `SELECT roles FROM users WHERE id = ? LIMIT 1`,
     [userId]
   );
+  const userRolesStr = userRows[0]?.roles || '';
+  if (!userRolesStr) {
+    return {
+      roles: [],
+      module_permissions: [],
+      field_permissions: []
+    };
+  }
 
-  const roleCodes = roles.map((role) => role.code);
+  const roleCodes = userRolesStr.split(',');
+  const placeholders = roleCodes.map(() => '?').join(', ');
+  const [roles] = await pool.execute(
+    `SELECT id, name, code
+     FROM roles
+     WHERE code IN (${placeholders})
+       AND deleted_at IS NULL
+     ORDER BY name`,
+    roleCodes
+  );
   const [modulePermissions, fieldPermissions] = await Promise.all([
     getRoleModulePermissions(roleCodes),
     getRoleFieldPermissions(roleCodes)

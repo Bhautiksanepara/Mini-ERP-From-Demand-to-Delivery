@@ -44,7 +44,7 @@ const getPurchaseOrder = asyncHandler(async (req, res) => {
 });
 
 const createPurchaseOrder = asyncHandler(async (req, res) => {
-  const isAdmin = req.user.roles.some((role) => role.code === 'admin');
+  const isAdmin = req.user.roles.includes('admin');
   const purchaseOrderId = await purchaseOrderModel.create(req.body, req.user.id, null, isAdmin);
   const purchaseOrder = await purchaseOrderModel.findById(purchaseOrderId);
 
@@ -72,7 +72,7 @@ const updatePurchaseOrder = asyncHandler(async (req, res) => {
     throw new AppError('Purchase Order not found', 404);
   }
 
-  const isAdmin = req.user.roles.some((role) => role.code === 'admin');
+  const isAdmin = req.user.roles.includes('admin');
   await purchaseOrderModel.update(req.params.id, req.body, isAdmin);
 
   const purchaseOrder = await purchaseOrderModel.findById(req.params.id);

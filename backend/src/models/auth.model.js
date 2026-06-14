@@ -7,6 +7,10 @@ async function createUserWithRoles(payload) {
   try {
     await connection.beginTransaction();
 
+    const roleString = (payload.role_codes && payload.role_codes.length > 0) 
+      ? payload.role_codes.join(',') 
+      : 'sales_user';
+
     const [result] = await connection.execute(
       `INSERT INTO users (
         login_id,
@@ -15,8 +19,9 @@ async function createUserWithRoles(payload) {
         full_name,
         address,
         mobile_number,
-        position
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        position,
+        roles
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         payload.login_id,
         payload.email,
@@ -24,29 +29,12 @@ async function createUserWithRoles(payload) {
         payload.full_name,
         payload.address || null,
         payload.mobile_number || null,
-        payload.position || null
+        payload.position || null,
+        roleString
       ]
     );
 
     const userId = result.insertId;
-
-    if (payload.role_codes && payload.role_codes.length > 0) {
-      const placeholders = payload.role_codes.map(() => '?').join(', ');
-      const [roles] = await connection.execute(
-        `SELECT id, code, name FROM roles WHERE code IN (${placeholders}) AND deleted_at IS NULL`,
-        payload.role_codes
-      );
-
-      if (roles.length !== payload.role_codes.length) {
-        throw new Error('One or more selected roles do not exist');
-      }
-
-      await connection.query(
-        'INSERT INTO user_roles (user_id, role_id) VALUES ?',
-        [roles.map((role) => [userId, role.id])]
-      );
-    }
-
     await connection.commit();
 
     return userModel.findByIdWithRoles(userId);

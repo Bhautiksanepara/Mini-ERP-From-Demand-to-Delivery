@@ -437,7 +437,7 @@ async function replaceWorkOrders(orderId, workOrders = [], connection) {
   }
 }
 
-async function create(payload, userId, externalConnection = null) {
+async function create(payload, userId, externalConnection = null, isAdmin = false) {
   const connection = externalConnection || await pool.getConnection();
   const manageTransaction = !externalConnection;
 
@@ -459,29 +459,59 @@ async function create(payload, userId, externalConnection = null) {
     }
 
     const reference = await generateReference('manufacturing_order', connection);
+
+    const fields = [
+      'reference',
+      'schedule_date',
+      'finished_product_id',
+      'quantity',
+      'unit',
+      'assignee_id',
+      'bom_id',
+      'source_sales_order_id',
+      'created_by'
+    ];
+    const values = [
+      reference,
+      normalizeDate(payload.schedule_date),
+      payload.finished_product_id,
+      payload.quantity,
+      payload.unit || 'Units',
+      payload.assignee_id || null,
+      payload.bom_id || null,
+      payload.source_sales_order_id || null,
+      userId
+    ];
+
+    if (isAdmin && payload.status) {
+      fields.push('status');
+      values.push(payload.status);
+
+      if (payload.status === 'Confirmed') {
+        fields.push('confirmed_at');
+        values.push(new Date());
+      } else if (payload.status === 'In Progress') {
+        fields.push('confirmed_at');
+        values.push(new Date());
+        fields.push('started_at');
+        values.push(new Date());
+      } else if (payload.status === 'Done') {
+        fields.push('confirmed_at');
+        values.push(new Date());
+        fields.push('started_at');
+        values.push(new Date());
+        fields.push('produced_at');
+        values.push(new Date());
+      } else if (payload.status === 'Cancelled') {
+        fields.push('cancelled_at');
+        values.push(new Date());
+      }
+    }
+
+    const placeholders = fields.map(() => '?').join(', ');
     const [result] = await connection.execute(
-      `INSERT INTO manufacturing_orders (
-        reference,
-        schedule_date,
-        finished_product_id,
-        quantity,
-        unit,
-        assignee_id,
-        bom_id,
-        source_sales_order_id,
-        created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        reference,
-        normalizeDate(payload.schedule_date),
-        payload.finished_product_id,
-        payload.quantity,
-        payload.unit || 'Units',
-        payload.assignee_id || null,
-        payload.bom_id || null,
-        payload.source_sales_order_id || null,
-        userId
-      ]
+      `INSERT INTO manufacturing_orders (${fields.join(', ')}) VALUES (${placeholders})`,
+      values
     );
 
     const components = payload.components || await buildComponentsFromBom(
@@ -515,7 +545,7 @@ async function create(payload, userId, externalConnection = null) {
   }
 }
 
-async function update(id, payload) {
+async function update(id, payload, isAdmin = false) {
   const connection = await pool.getConnection();
 
   try {
@@ -523,7 +553,7 @@ async function update(id, payload) {
 
     const order = await assertOrderExists(id, connection);
 
-    if (!['Draft', 'Confirmed', 'In Progress'].includes(order.status)) {
+    if (!isAdmin && !['Draft', 'Confirmed', 'In Progress'].includes(order.status)) {
       throw new AppError('This Manufacturing Order cannot be edited', 409);
     }
 
@@ -561,6 +591,34 @@ async function update(id, payload) {
       if (Object.prototype.hasOwnProperty.call(payload, field)) {
         updates.push(`${field} = ?`);
         values.push(field === 'schedule_date' ? normalizeDate(payload[field]) : payload[field] ?? null);
+      }
+    }
+
+    if (isAdmin && Object.prototype.hasOwnProperty.call(payload, 'status')) {
+      updates.push('status = ?');
+      values.push(payload.status);
+
+      if (payload.status === 'Confirmed' && !order.confirmed_at) {
+        updates.push('confirmed_at = CURRENT_TIMESTAMP');
+      } else if (payload.status === 'In Progress') {
+        if (!order.confirmed_at) {
+          updates.push('confirmed_at = CURRENT_TIMESTAMP');
+        }
+        if (!order.started_at) {
+          updates.push('started_at = CURRENT_TIMESTAMP');
+        }
+      } else if (payload.status === 'Done') {
+        if (!order.confirmed_at) {
+          updates.push('confirmed_at = CURRENT_TIMESTAMP');
+        }
+        if (!order.started_at) {
+          updates.push('started_at = CURRENT_TIMESTAMP');
+        }
+        if (!order.produced_at) {
+          updates.push('produced_at = CURRENT_TIMESTAMP');
+        }
+      } else if (payload.status === 'Cancelled' && !order.cancelled_at) {
+        updates.push('cancelled_at = CURRENT_TIMESTAMP');
       }
     }
 

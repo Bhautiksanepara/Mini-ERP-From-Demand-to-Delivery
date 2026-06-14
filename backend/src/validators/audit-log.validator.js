@@ -4,6 +4,7 @@ const listAuditLogsSchema = z.object({
   body: z.object({}).optional(),
   params: z.object({}).optional(),
   query: z.object({
+    search: z.string().trim().max(150).optional(),
     module_code: z.string().trim().max(50).optional(),
     user_id: z.coerce.number().int().positive().optional(),
     action: z.enum(['Created', 'Updated', 'Deleted', 'Confirmed', 'Delivered', 'Received', 'Produced', 'Cancelled', 'Started']).optional(),

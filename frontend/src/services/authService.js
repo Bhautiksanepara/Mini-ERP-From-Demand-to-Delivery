@@ -6,7 +6,14 @@ export async function login(credentials) {
     body: JSON.stringify(credentials)
   });
   setAccessToken(payload.data.access_token);
-  return payload.data.user;
+  const user = payload.data.user;
+  try {
+    const permRes = await apiRequest('/permissions/me');
+    user.permissions = permRes.data;
+  } catch (err) {
+    user.permissions = { module_permissions: [] };
+  }
+  return user;
 }
 
 export async function signup(form) {
@@ -15,12 +22,24 @@ export async function signup(form) {
     body: JSON.stringify(form)
   });
   setAccessToken(payload.data.access_token);
-  return payload.data.user;
+  const user = payload.data.user;
+  try {
+    const permRes = await apiRequest('/permissions/me');
+    user.permissions = permRes.data;
+  } catch (err) {
+    user.permissions = { module_permissions: [] };
+  }
+  return user;
 }
 
 export async function fetchCurrentUser() {
-  const payload = await apiRequest('/auth/me');
-  return payload.data.user;
+  const [userRes, permRes] = await Promise.all([
+    apiRequest('/auth/me'),
+    apiRequest('/permissions/me').catch(() => ({ data: { module_permissions: [] } }))
+  ]);
+  const user = userRes.data.user;
+  user.permissions = permRes.data;
+  return user;
 }
 
 export function logout() {

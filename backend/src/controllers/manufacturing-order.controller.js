@@ -47,7 +47,7 @@ const getManufacturingOrder = asyncHandler(async (req, res) => {
 });
 
 const createManufacturingOrder = asyncHandler(async (req, res) => {
-  const isAdmin = req.user.roles.some((role) => role.code === 'admin');
+  const isAdmin = req.user.roles.includes('admin');
   const manufacturingOrderId = await manufacturingOrderModel.create(req.body, req.user.id, null, isAdmin);
   const manufacturingOrder = await manufacturingOrderModel.findById(manufacturingOrderId);
 
@@ -75,7 +75,7 @@ const updateManufacturingOrder = asyncHandler(async (req, res) => {
     throw new AppError('Manufacturing Order not found', 404);
   }
 
-  const isAdmin = req.user.roles.some((role) => role.code === 'admin');
+  const isAdmin = req.user.roles.includes('admin');
   await manufacturingOrderModel.update(req.params.id, req.body, isAdmin);
 
   const manufacturingOrder = await manufacturingOrderModel.findById(req.params.id);

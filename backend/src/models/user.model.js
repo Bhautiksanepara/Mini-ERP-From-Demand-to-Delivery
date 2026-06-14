@@ -47,14 +47,23 @@ async function findByLoginIdOrEmail(loginId, email) {
 }
 
 async function findRolesByUserId(userId) {
-  const [rows] = await pool.execute(
-    `SELECT r.id, r.name, r.code
-     FROM roles r
-     INNER JOIN user_roles ur ON ur.role_id = r.id
-     WHERE ur.user_id = ?
-       AND r.deleted_at IS NULL
-     ORDER BY r.name`,
+  const [userRows] = await pool.execute(
+    `SELECT roles FROM users WHERE id = ? LIMIT 1`,
     [userId]
+  );
+  const userRolesStr = userRows[0]?.roles || '';
+  if (!userRolesStr) {
+    return [];
+  }
+  const roleCodes = userRolesStr.split(',');
+  const placeholders = roleCodes.map(() => '?').join(', ');
+  const [rows] = await pool.execute(
+    `SELECT id, name, code
+     FROM roles
+     WHERE code IN (${placeholders})
+       AND deleted_at IS NULL
+     ORDER BY name`,
+    roleCodes
   );
 
   return rows;
@@ -86,12 +95,8 @@ async function list(filters = {}) {
     values.push(filters.is_active === 'true' || filters.is_active === true ? 1 : 0);
   }
 
-  let roleJoin = '';
   if (filters.role_code) {
-    roleJoin = `
-      INNER JOIN user_roles ur ON ur.user_id = u.id
-      INNER JOIN roles r ON r.id = ur.role_id AND r.code = ?
-    `;
+    where.push('FIND_IN_SET(?, u.roles) > 0');
     values.push(filters.role_code);
   }
 
@@ -100,9 +105,8 @@ async function list(filters = {}) {
 
   const [rows] = await pool.query(
     `SELECT u.id, u.login_id, u.email, u.full_name, u.address, u.mobile_number, u.position, u.profile_photo_mime, u.is_active, u.created_at, u.updated_at,
-            (SELECT GROUP_CONCAT(r.code) FROM roles r INNER JOIN user_roles ur ON ur.role_id = r.id WHERE ur.user_id = u.id AND r.deleted_at IS NULL) AS role_codes
+            u.roles AS role_codes
      FROM users u
-     ${roleJoin}
      WHERE ${where.join(' AND ')}
      ORDER BY u.full_name
      LIMIT ? OFFSET ?`,
@@ -143,6 +147,11 @@ async function update(id, payload, externalConnection = null) {
       }
     }
 
+    if (payload.role_codes) {
+      updates.push('roles = ?');
+      values.push(payload.role_codes.join(','));
+    }
+
     if (updates.length > 0) {
       values.push(id);
       await connection.execute(
@@ -151,31 +160,6 @@ async function update(id, payload, externalConnection = null) {
          WHERE id = ? AND deleted_at IS NULL`,
         values
       );
-    }
-
-    if (payload.role_codes) {
-      // Delete existing roles
-      await connection.execute(
-        `DELETE FROM user_roles WHERE user_id = ?`,
-        [id]
-      );
-
-      if (payload.role_codes.length > 0) {
-        const placeholders = payload.role_codes.map(() => '?').join(', ');
-        const [roles] = await connection.execute(
-          `SELECT id, code, name FROM roles WHERE code IN (${placeholders}) AND deleted_at IS NULL`,
-          payload.role_codes
-        );
-
-        if (roles.length !== payload.role_codes.length) {
-          throw new Error('One or more selected roles do not exist');
-        }
-
-        await connection.query(
-          'INSERT INTO user_roles (user_id, role_id) VALUES ?',
-          [roles.map((role) => [id, role.id])]
-        );
-      }
     }
 
     if (manageTransaction) {

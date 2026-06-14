@@ -10,57 +10,23 @@ INSERT INTO users (
   address,
   mobile_number,
   position,
+  roles,
   is_active
 ) VALUES
-('admin01', 'admin@minierp.local', @demo_password_hash, 'Admin User', 'Mumbai, Maharashtra', '+919000000001', 'System Administrator', TRUE),
-('sales01', 'sales@minierp.local', @demo_password_hash, 'Ravi Jadeja', 'Pune, Maharashtra', '+919000000002', 'Sales Manager', TRUE),
-('purch01', 'purchase@minierp.local', @demo_password_hash, 'Vijay Sharma', 'Nashik, Maharashtra', '+919000000003', 'Purchase Manager', TRUE),
-('mfg001', 'manufacturing@minierp.local', @demo_password_hash, 'Meera Singh', 'Thane, Maharashtra', '+919000000004', 'Manufacturing Lead', TRUE),
-('inv001', 'inventory@minierp.local', @demo_password_hash, 'Amit Patil', 'Nagpur, Maharashtra', '+919000000005', 'Inventory Manager', TRUE),
-('owner1', 'owner@minierp.local', @demo_password_hash, 'Ananya Rao', 'Bengaluru, Karnataka', '+919000000006', 'Business Owner', TRUE)
+('admin01', 'admin@minierp.local', @demo_password_hash, 'Admin User', 'Mumbai, Maharashtra', '+919000000001', 'System Administrator', 'admin', TRUE),
+('sales01', 'sales@minierp.local', @demo_password_hash, 'Ravi Jadeja', 'Pune, Maharashtra', '+919000000002', 'Sales Manager', 'sales_user', TRUE),
+('purch01', 'purchase@minierp.local', @demo_password_hash, 'Vijay Sharma', 'Nashik, Maharashtra', '+919000000003', 'Purchase Manager', 'purchase_user', TRUE),
+('mfg001', 'manufacturing@minierp.local', @demo_password_hash, 'Meera Singh', 'Thane, Maharashtra', '+919000000004', 'Manufacturing Lead', 'manufacturing_user', TRUE),
+('inv001', 'inventory@minierp.local', @demo_password_hash, 'Amit Patil', 'Nagpur, Maharashtra', '+919000000005', 'Inventory Manager', 'inventory_manager', TRUE),
+('owner1', 'owner@minierp.local', @demo_password_hash, 'Ananya Rao', 'Bengaluru, Karnataka', '+919000000006', 'Business Owner', 'business_owner', TRUE)
 ON DUPLICATE KEY UPDATE
   email = VALUES(email),
   full_name = VALUES(full_name),
   address = VALUES(address),
   mobile_number = VALUES(mobile_number),
   position = VALUES(position),
+  roles = VALUES(roles),
   is_active = VALUES(is_active);
-
-INSERT IGNORE INTO user_roles (user_id, role_id)
-SELECT u.id, r.id
-FROM users u
-JOIN roles r ON r.code = 'admin'
-WHERE u.login_id = 'admin01';
-
-INSERT IGNORE INTO user_roles (user_id, role_id)
-SELECT u.id, r.id
-FROM users u
-JOIN roles r ON r.code = 'sales_user'
-WHERE u.login_id = 'sales01';
-
-INSERT IGNORE INTO user_roles (user_id, role_id)
-SELECT u.id, r.id
-FROM users u
-JOIN roles r ON r.code = 'purchase_user'
-WHERE u.login_id = 'purch01';
-
-INSERT IGNORE INTO user_roles (user_id, role_id)
-SELECT u.id, r.id
-FROM users u
-JOIN roles r ON r.code = 'manufacturing_user'
-WHERE u.login_id = 'mfg001';
-
-INSERT IGNORE INTO user_roles (user_id, role_id)
-SELECT u.id, r.id
-FROM users u
-JOIN roles r ON r.code = 'inventory_manager'
-WHERE u.login_id = 'inv001';
-
-INSERT IGNORE INTO user_roles (user_id, role_id)
-SELECT u.id, r.id
-FROM users u
-JOIN roles r ON r.code = 'business_owner'
-WHERE u.login_id = 'owner1';
 
 INSERT INTO customers (name, address, email, mobile_number, created_by)
 SELECT 'Suzuki India', 'Mumbai, Maharashtra', 'orders@suzuki.example', '+918000000001', (SELECT id FROM users WHERE login_id = 'admin01')

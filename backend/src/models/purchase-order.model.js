@@ -251,7 +251,7 @@ async function replaceItems(orderId, items, connection) {
   }
 }
 
-async function create(payload, userId, externalConnection = null) {
+async function create(payload, userId, externalConnection = null, isAdmin = false) {
   const connection = externalConnection || await pool.getConnection();
   const manageTransaction = !externalConnection;
 
@@ -266,25 +266,48 @@ async function create(payload, userId, externalConnection = null) {
       payload.vendor_address,
       connection
     );
+
+    const fields = [
+      'reference',
+      'vendor_id',
+      'vendor_address',
+      'responsible_user_id',
+      'scheduled_date',
+      'source_sales_order_id',
+      'created_by'
+    ];
+    const values = [
+      reference,
+      payload.vendor_id,
+      vendorAddress,
+      payload.responsible_user_id,
+      normalizeDate(payload.scheduled_date),
+      payload.source_sales_order_id || null,
+      userId
+    ];
+
+    if (isAdmin && payload.status) {
+      fields.push('status');
+      values.push(payload.status);
+
+      if (payload.status === 'Confirmed') {
+        fields.push('confirmed_at');
+        values.push(new Date());
+      } else if (['Partially Received', 'Fully Received'].includes(payload.status)) {
+        fields.push('confirmed_at');
+        values.push(new Date());
+        fields.push('received_at');
+        values.push(new Date());
+      } else if (payload.status === 'Cancelled') {
+        fields.push('cancelled_at');
+        values.push(new Date());
+      }
+    }
+
+    const placeholders = fields.map(() => '?').join(', ');
     const [result] = await connection.execute(
-      `INSERT INTO purchase_orders (
-        reference,
-        vendor_id,
-        vendor_address,
-        responsible_user_id,
-        scheduled_date,
-        source_sales_order_id,
-        created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        reference,
-        payload.vendor_id,
-        vendorAddress,
-        payload.responsible_user_id,
-        normalizeDate(payload.scheduled_date),
-        payload.source_sales_order_id || null,
-        userId
-      ]
+      `INSERT INTO purchase_orders (${fields.join(', ')}) VALUES (${placeholders})`,
+      values
     );
 
     await replaceItems(result.insertId, payload.items, connection);
@@ -306,7 +329,7 @@ async function create(payload, userId, externalConnection = null) {
   }
 }
 
-async function update(id, payload) {
+async function update(id, payload, isAdmin = false) {
   const connection = await pool.getConnection();
 
   try {
@@ -314,7 +337,7 @@ async function update(id, payload) {
 
     const order = await assertOrderExists(id, connection);
 
-    if (order.status !== 'Draft') {
+    if (!isAdmin && order.status !== 'Draft') {
       throw new AppError('Only Draft Purchase Orders can be edited', 409);
     }
 
@@ -344,6 +367,24 @@ async function update(id, payload) {
     if (Object.prototype.hasOwnProperty.call(payload, 'source_sales_order_id')) {
       updates.push('source_sales_order_id = ?');
       values.push(payload.source_sales_order_id || null);
+    }
+
+    if (isAdmin && Object.prototype.hasOwnProperty.call(payload, 'status')) {
+      updates.push('status = ?');
+      values.push(payload.status);
+
+      if (payload.status === 'Confirmed' && !order.confirmed_at) {
+        updates.push('confirmed_at = CURRENT_TIMESTAMP');
+      } else if (['Partially Received', 'Fully Received'].includes(payload.status)) {
+        if (!order.confirmed_at) {
+          updates.push('confirmed_at = CURRENT_TIMESTAMP');
+        }
+        if (!order.received_at && payload.status === 'Fully Received') {
+          updates.push('received_at = CURRENT_TIMESTAMP');
+        }
+      } else if (payload.status === 'Cancelled' && !order.cancelled_at) {
+        updates.push('cancelled_at = CURRENT_TIMESTAMP');
+      }
     }
 
     if (updates.length) {

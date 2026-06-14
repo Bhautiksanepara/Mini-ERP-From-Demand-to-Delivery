@@ -10,17 +10,22 @@ import { ModulePage } from '../pages/ModulePage';
 export function App() {
   const { isBooting, signIn, signOut, signUp, user } = useAuth();
   const [activePage, setActivePage] = useState('dashboard');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [pageFilters, setPageFilters] = useState(null);
+
+  const navigate = (page, filters = null) => {
+    setActivePage(page);
+    setPageFilters(filters);
+  };
 
   if (isBooting) return <BootScreen />;
   if (!user) return <AuthPage onSignIn={signIn} onSignUp={signUp} />;
 
   return (
-    <AppLayout activePage={activePage} onLogout={signOut} onNavigate={setActivePage} searchTerm={searchTerm} onSearch={setSearchTerm} user={user}>
+    <AppLayout activePage={activePage} onLogout={signOut} onNavigate={navigate} user={user}>
       {activePage === 'dashboard' ? (
-        <DashboardPage user={user} />
+        <DashboardPage onNavigate={navigate} user={user} />
       ) : (
-        <ModulePage config={moduleConfigs[activePage]} moduleKey={activePage} searchTerm={searchTerm} />
+        <ModulePage config={moduleConfigs[activePage]} moduleKey={activePage} initialFilters={pageFilters} user={user} />
       )}
     </AppLayout>
   );

@@ -27,19 +27,11 @@ CREATE TABLE users (
   profile_photo LONGBLOB NULL,
   profile_photo_mime VARCHAR(80),
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  roles SET('admin', 'sales_user', 'purchase_user', 'manufacturing_user', 'inventory_manager', 'business_owner') NOT NULL DEFAULT 'sales_user',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at DATETIME NULL,
   CONSTRAINT chk_users_login_len CHECK (CHAR_LENGTH(login_id) BETWEEN 6 AND 12)
-);
-
-CREATE TABLE user_roles (
-  user_id BIGINT UNSIGNED NOT NULL,
-  role_id BIGINT UNSIGNED NOT NULL,
-  assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (user_id, role_id),
-  CONSTRAINT fk_user_roles_user FOREIGN KEY (user_id) REFERENCES users(id),
-  CONSTRAINT fk_user_roles_role FOREIGN KEY (role_id) REFERENCES roles(id)
 );
 
 CREATE TABLE modules (

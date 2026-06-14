@@ -1,6 +1,6 @@
 import { formatCell, labelize } from '../../utils/formatters';
 
-export function DataTable({ columns, loading = false, rows }) {
+export function DataTable({ columns, loading = false, rows, onRowClick }) {
   return (
     <section className="overflow-auto rounded-lg border border-enterprise-line bg-white">
       <table className="w-full min-w-[840px] border-collapse">
@@ -22,7 +22,11 @@ export function DataTable({ columns, loading = false, rows }) {
             </tr>
           ) : rows.length ? (
             rows.map((row, index) => (
-              <tr key={row.id || row.reference || index} className="hover:bg-blue-50/40">
+              <tr 
+                key={row.id || row.reference || index} 
+                className={`hover:bg-blue-50/40 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
+                onClick={() => onRowClick && onRowClick(row)}
+              >
                 {columns.map((column) => (
                   <td key={column} className="whitespace-nowrap border-b border-slate-100 px-4 py-3 text-sm font-medium text-slate-800">
                     {formatCell(row[column])}

@@ -22,7 +22,7 @@ const salesOrderColumns = `
   so.updated_at,
   so.deleted_at,
   so.deleted_by,
-  COALESCE(SUM(soi.line_total), 0) AS total,
+  COALESCE(SUM(soi.line_total), 0) * 1.18 AS total,
   COUNT(soi.id) AS item_count
 `;
 
@@ -252,7 +252,7 @@ async function replaceItems(orderId, items, connection) {
   }
 }
 
-async function create(payload, userId) {
+async function create(payload, userId, isAdmin = false) {
   const connection = await pool.getConnection();
 
   try {
@@ -264,23 +264,46 @@ async function create(payload, userId) {
       payload.customer_address,
       connection
     );
+
+    const fields = [
+      'reference',
+      'customer_id',
+      'customer_address',
+      'sales_person_id',
+      'scheduled_date',
+      'created_by'
+    ];
+    const values = [
+      reference,
+      payload.customer_id,
+      customerAddress,
+      payload.sales_person_id,
+      normalizeDate(payload.scheduled_date),
+      userId
+    ];
+
+    if (isAdmin && payload.status) {
+      fields.push('status');
+      values.push(payload.status);
+
+      if (payload.status === 'Confirmed') {
+        fields.push('confirmed_at');
+        values.push(new Date());
+      } else if (['Partially Delivered', 'Fully Delivered'].includes(payload.status)) {
+        fields.push('confirmed_at');
+        values.push(new Date());
+        fields.push('delivered_at');
+        values.push(new Date());
+      } else if (payload.status === 'Cancelled') {
+        fields.push('cancelled_at');
+        values.push(new Date());
+      }
+    }
+
+    const placeholders = fields.map(() => '?').join(', ');
     const [result] = await connection.execute(
-      `INSERT INTO sales_orders (
-        reference,
-        customer_id,
-        customer_address,
-        sales_person_id,
-        scheduled_date,
-        created_by
-      ) VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        reference,
-        payload.customer_id,
-        customerAddress,
-        payload.sales_person_id,
-        normalizeDate(payload.scheduled_date),
-        userId
-      ]
+      `INSERT INTO sales_orders (${fields.join(', ')}) VALUES (${placeholders})`,
+      values
     );
 
     await replaceItems(result.insertId, payload.items, connection);
@@ -295,7 +318,7 @@ async function create(payload, userId) {
   }
 }
 
-async function update(id, payload) {
+async function update(id, payload, isAdmin = false) {
   const connection = await pool.getConnection();
 
   try {
@@ -303,7 +326,7 @@ async function update(id, payload) {
 
     const order = await assertOrderExists(id, connection);
 
-    if (order.status !== 'Draft') {
+    if (!isAdmin && order.status !== 'Draft') {
       throw new AppError('Only Draft Sales Orders can be edited', 409);
     }
 
@@ -328,6 +351,24 @@ async function update(id, payload) {
     if (Object.prototype.hasOwnProperty.call(payload, 'scheduled_date')) {
       updates.push('scheduled_date = ?');
       values.push(normalizeDate(payload.scheduled_date));
+    }
+
+    if (isAdmin && Object.prototype.hasOwnProperty.call(payload, 'status')) {
+      updates.push('status = ?');
+      values.push(payload.status);
+
+      if (payload.status === 'Confirmed' && !order.confirmed_at) {
+        updates.push('confirmed_at = CURRENT_TIMESTAMP');
+      } else if (['Partially Delivered', 'Fully Delivered'].includes(payload.status)) {
+        if (!order.confirmed_at) {
+          updates.push('confirmed_at = CURRENT_TIMESTAMP');
+        }
+        if (!order.delivered_at && payload.status === 'Fully Delivered') {
+          updates.push('delivered_at = CURRENT_TIMESTAMP');
+        }
+      } else if (payload.status === 'Cancelled' && !order.cancelled_at) {
+        updates.push('cancelled_at = CURRENT_TIMESTAMP');
+      }
     }
 
     if (updates.length) {
