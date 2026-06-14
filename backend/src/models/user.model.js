@@ -9,6 +9,7 @@ const userColumns = `
   address,
   mobile_number,
   position,
+  profile_photo,
   profile_photo_mime,
   is_active,
   created_at,

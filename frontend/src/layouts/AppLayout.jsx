@@ -6,7 +6,11 @@ import { cn } from '../utils/formatters';
 
 export function AppLayout({ activePage, children, onNavigate, onLogout, user }) {
   const [collapsed, setCollapsed] = useState(false);
-  const pageTitle = activePage === 'dashboard' ? 'System Administrator Dashboard' : moduleConfigs[activePage].title;
+  const pageTitle = activePage === 'dashboard'
+    ? 'System Administrator Dashboard'
+    : activePage === 'profile'
+      ? 'My Profile'
+      : moduleConfigs[activePage].title;
   const navigate = (page) => {
     onNavigate(page);
   };
@@ -50,6 +54,7 @@ export function AppLayout({ activePage, children, onNavigate, onLogout, user }) 
               <NavButton key={key} active={activePage === key} collapsed={collapsed} icon={config.icon} label={config.title} onClick={() => navigate(key)} />
             );
           })}
+          <NavButton active={activePage === 'profile'} collapsed={collapsed} icon={UserRound} label="My Profile" onClick={() => navigate('profile')} />
         </nav>
       </aside>
 
@@ -63,10 +68,14 @@ export function AppLayout({ activePage, children, onNavigate, onLogout, user }) 
             <h2 className="m-0 text-xl font-extrabold text-slate-900">{pageTitle}</h2>
           </div>
           <div className="ml-auto flex items-center gap-2 max-md:ml-0 max-md:w-full">
-            <div className="flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-slate-700">
+            <button
+              onClick={() => navigate('profile')}
+              className="flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-slate-700 transition hover:border-enterprise-blue hover:bg-slate-50"
+              title="My Profile"
+            >
               <UserRound size={17} className="text-slate-500" />
               <span className="font-bold text-sm">{user.full_name || user.login_id}</span>
-            </div>
+            </button>
             <button className="grid h-10 w-10 place-items-center rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200" onClick={onLogout} title="Logout">
               <LogOut size={18} />
             </button>

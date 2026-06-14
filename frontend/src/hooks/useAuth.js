@@ -33,11 +33,16 @@ export function useAuth() {
     setUser(null);
   }
 
+  function updateUser(patch) {
+    setUser((current) => ({ ...current, ...patch }));
+  }
+
   return {
     isBooting,
     user,
     signIn,
     signOut,
-    signUp
+    signUp,
+    updateUser
   };
 }

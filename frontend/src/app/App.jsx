@@ -6,9 +6,10 @@ import { useAuth } from '../hooks/useAuth';
 import { AuthPage } from '../pages/AuthPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { ModulePage } from '../pages/ModulePage';
+import { ProfilePage } from '../pages/ProfilePage';
 
 export function App() {
-  const { isBooting, signIn, signOut, signUp, user } = useAuth();
+  const { isBooting, signIn, signOut, signUp, updateUser, user } = useAuth();
   const [activePage, setActivePage] = useState('dashboard');
   const [pageFilters, setPageFilters] = useState(null);
 
@@ -24,6 +25,8 @@ export function App() {
     <AppLayout activePage={activePage} onLogout={signOut} onNavigate={navigate} user={user}>
       {activePage === 'dashboard' ? (
         <DashboardPage onNavigate={navigate} user={user} />
+      ) : activePage === 'profile' ? (
+        <ProfilePage user={user} onUserUpdate={updateUser} />
       ) : (
         <ModulePage config={moduleConfigs[activePage]} moduleKey={activePage} initialFilters={pageFilters} user={user} />
       )}
