@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const { paginationSortQuery } = require('./list-query.validator');
 
 const idParamSchema = z.object({
   params: z.object({
@@ -14,9 +15,11 @@ const listUsersSchema = z.object({
   query: z.object({
     search: z.string().trim().max(150).optional(),
     role_code: z.string().trim().optional(),
+    role_filter: z.enum(['admin', 'non_admin']).optional(),
     is_active: z.string().trim().optional(),
     limit: z.coerce.number().int().positive().max(200).optional(),
-    offset: z.coerce.number().int().nonnegative().optional()
+    offset: z.coerce.number().int().nonnegative().optional(),
+    ...paginationSortQuery
   }).optional()
 });
 

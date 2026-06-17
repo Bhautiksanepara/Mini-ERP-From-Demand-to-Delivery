@@ -2,12 +2,16 @@ const auditLogModel = require('../models/audit-log.model');
 const { asyncHandler } = require('../utils/async-handler');
 
 const listLogs = asyncHandler(async (req, res) => {
-  const logs = await auditLogModel.listAuditLogs(req.query || {});
-  
+  const { rows, pagination, tab_counts } = await auditLogModel.listAuditLogs(req.query || {});
+
   res.json({
     success: true,
     data: {
-      audit_logs: logs
+      audit_logs: rows
+    },
+    meta: {
+      pagination,
+      tab_counts
     }
   });
 });

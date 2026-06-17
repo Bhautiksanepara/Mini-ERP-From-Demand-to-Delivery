@@ -55,7 +55,7 @@ export function Modal({ isOpen, onClose, title, children }) {
         )}
         
         {/* Body (Scrollable) */}
-        <div className="overflow-y-auto p-6 flex-1 bg-white">
+        <div className="overflow-y-auto p-6 flex-1 min-h-0 bg-white">
           {children}
         </div>
       </div>

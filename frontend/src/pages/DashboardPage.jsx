@@ -15,12 +15,14 @@ const STATUS_STYLES = {
   'Fully Delivered': { border: 'border-emerald-200', bg: 'bg-emerald-50', label: 'text-emerald-600', value: 'text-emerald-700' },
   'Fully Received': { border: 'border-emerald-200', bg: 'bg-emerald-50', label: 'text-emerald-600', value: 'text-emerald-700' },
   Done: { border: 'border-emerald-200', bg: 'bg-emerald-50', label: 'text-emerald-600', value: 'text-emerald-700' },
-  Late: { border: 'border-red-200', bg: 'bg-red-50', label: 'text-red-500', value: 'text-red-600' }
+  Late: { border: 'border-red-200', bg: 'bg-red-50', label: 'text-red-500', value: 'text-red-600' },
+  Cancelled: { border: 'border-rose-200', bg: 'bg-rose-50', label: 'text-rose-500', value: 'text-rose-600' }
 };
 
-function sumExcluding(counts, exclude = 'Late') {
+function sumExcluding(counts, exclude = ['Late', 'Cancelled']) {
   if (!counts) return 0;
-  return Object.entries(counts).reduce((sum, [key, value]) => (key === exclude ? sum : sum + Number(value || 0)), 0);
+  const excluded = Array.isArray(exclude) ? exclude : [exclude];
+  return Object.entries(counts).reduce((sum, [key, value]) => (excluded.includes(key) ? sum : sum + Number(value || 0)), 0);
 }
 
 function getGreeting() {
@@ -99,7 +101,8 @@ export function DashboardPage({ onNavigate, user }) {
         { key: 'Confirmed', label: 'Confirmed' },
         { key: 'Partially Delivered', label: 'Partially Delivered' },
         { key: 'Fully Delivered', label: 'Delivered' },
-        { key: 'Late', label: 'Late' }
+        { key: 'Late', label: 'Late' },
+        { key: 'Cancelled', label: 'Cancelled' }
       ]
     },
     {
@@ -111,7 +114,8 @@ export function DashboardPage({ onNavigate, user }) {
         { key: 'Confirmed', label: 'Confirmed' },
         { key: 'Partially Received', label: 'Partially Received' },
         { key: 'Fully Received', label: 'Received' },
-        { key: 'Late', label: 'Late' }
+        { key: 'Late', label: 'Late' },
+        { key: 'Cancelled', label: 'Cancelled' }
       ]
     },
     {
@@ -124,7 +128,8 @@ export function DashboardPage({ onNavigate, user }) {
         { key: 'In Progress', label: 'In-Progress' },
         { key: 'To Close', label: 'To Close' },
         { key: 'Done', label: 'Done' },
-        { key: 'Late', label: 'Late' }
+        { key: 'Late', label: 'Late' },
+        { key: 'Cancelled', label: 'Cancelled' }
       ]
     }
   ];

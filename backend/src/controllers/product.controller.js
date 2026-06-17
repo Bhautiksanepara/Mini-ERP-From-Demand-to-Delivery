@@ -16,12 +16,16 @@ const trackedFields = [
 ];
 
 const listProducts = asyncHandler(async (req, res) => {
-  const products = await productModel.list(req.query || {});
+  const { rows, pagination, tab_counts } = await productModel.list(req.query || {});
 
   res.json({
     success: true,
     data: {
-      products
+      products: rows
+    },
+    meta: {
+      pagination,
+      tab_counts
     }
   });
 });

@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const { paginationSortQuery } = require('./list-query.validator');
 
 const listInventorySummarySchema = z.object({
   body: z.object({}).optional(),
@@ -17,6 +18,7 @@ const listStockLedgerSchema = z.object({
   query: z.object({
     search: z.string().trim().max(150).optional(),
     product_id: z.coerce.number().int().positive().optional(),
+    movement_direction: z.enum(['IN', 'OUT']).optional(),
     movement_type: z.enum([
       'sales_delivery',
       'purchase_receipt',
@@ -29,7 +31,8 @@ const listStockLedgerSchema = z.object({
     start_date: z.string().trim().optional(),
     end_date: z.string().trim().optional(),
     limit: z.coerce.number().int().positive().max(200).optional(),
-    offset: z.coerce.number().int().nonnegative().optional()
+    offset: z.coerce.number().int().nonnegative().optional(),
+    ...paginationSortQuery
   }).optional()
 });
 

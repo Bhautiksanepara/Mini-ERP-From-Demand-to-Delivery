@@ -22,6 +22,7 @@ export const moduleConfigs = {
       "Partially Delivered",
       "Fully Delivered",
       "Late",
+      "Cancelled",
     ],
     statusFilters: {
       Draft: { status: "Draft" },
@@ -29,6 +30,7 @@ export const moduleConfigs = {
       "Partially Delivered": { status: "Partially Delivered" },
       "Fully Delivered": { status: "Fully Delivered" },
       Late: { late: true },
+      Cancelled: { status: "Cancelled" },
     },
     columns: [
       "reference",
@@ -60,6 +62,7 @@ export const moduleConfigs = {
       "Partially Received",
       "Fully Received",
       "Late",
+      "Cancelled",
     ],
     statusFilters: {
       Draft: { status: "Draft" },
@@ -67,6 +70,7 @@ export const moduleConfigs = {
       "Partially Received": { status: "Partially Received" },
       "Fully Received": { status: "Fully Received" },
       Late: { late: true },
+      Cancelled: { status: "Cancelled" },
     },
     columns: [
       "reference",
@@ -114,6 +118,7 @@ export const moduleConfigs = {
       "To Close",
       "Done",
       "Late",
+      "Cancelled",
     ],
     statusFilters: {
       Draft: { status: "Draft" },
@@ -121,6 +126,7 @@ export const moduleConfigs = {
       "In Progress": { status: "In Progress" },
       Done: { status: "Done" },
       Late: { late: true },
+      Cancelled: { status: "Cancelled" },
     },
     columns: [
       "reference",
@@ -247,6 +253,13 @@ export const moduleConfigs = {
       "reference_type",
       "note",
     ],
+    sortableColumns: [
+      "created_at",
+      "product_name",
+      "movement_type",
+      "quantity_change",
+      "reference_type",
+    ],
     sample: [
       {
         created_at: "26 May 2026, 08:15",
@@ -293,6 +306,13 @@ export const moduleConfigs = {
       "field_changed",
       "old_value",
       "new_value",
+    ],
+    sortableColumns: [
+      "created_at",
+      "user_name",
+      "module_code",
+      "record_type",
+      "action",
     ],
     sample: [
       {

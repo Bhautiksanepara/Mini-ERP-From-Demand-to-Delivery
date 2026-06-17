@@ -1,4 +1,15 @@
 const { pool } = require('../config/database');
+const { parsePagination, resolveSort, buildPaginationMeta } = require('../utils/list-query');
+
+const USER_SORT_COLUMNS = {
+  login_id: 'u.login_id',
+  full_name: 'u.full_name',
+  email: 'u.email',
+  mobile_number: 'u.mobile_number',
+  position: 'u.position',
+  is_active: 'u.is_active',
+  created_at: 'u.created_at'
+};
 
 const userColumns = `
   id,
@@ -101,23 +112,70 @@ async function list(filters = {}) {
     values.push(filters.role_code);
   }
 
-  const limit = Math.min(Number(filters.limit || 50), 200);
-  const offset = Number(filters.offset || 0);
+  if (filters.role_filter === 'admin') {
+    where.push("FIND_IN_SET('admin', u.roles) > 0");
+  } else if (filters.role_filter === 'non_admin') {
+    where.push("(FIND_IN_SET('admin', u.roles) = 0 OR u.roles IS NULL OR u.roles = '')");
+  }
+
+  const { limit, offset, page } = parsePagination(filters);
+  const orderBy = resolveSort(filters, USER_SORT_COLUMNS, 'full_name', 'asc');
 
   const [rows] = await pool.query(
     `SELECT u.id, u.login_id, u.email, u.full_name, u.address, u.mobile_number, u.position, u.profile_photo_mime, u.is_active, u.created_at, u.updated_at,
             u.roles AS role_codes
      FROM users u
      WHERE ${where.join(' AND ')}
-     ORDER BY u.full_name
+     ORDER BY ${orderBy}, u.id ASC
      LIMIT ? OFFSET ?`,
     [...values, limit, offset]
   );
 
-  return rows.map((row) => ({
-    ...row,
-    roles: row.role_codes ? row.role_codes.split(',') : []
-  }));
+  const [[{ total }]] = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM users u
+     WHERE ${where.join(' AND ')}`,
+    values
+  );
+
+  const tabCounts = await getTabCounts(filters);
+
+  return {
+    rows: rows.map((row) => ({
+      ...row,
+      roles: row.role_codes ? row.role_codes.split(',') : []
+    })),
+    pagination: buildPaginationMeta(total, page, limit),
+    tab_counts: tabCounts
+  };
+}
+
+async function getTabCounts(filters = {}) {
+  const where = ['u.deleted_at IS NULL'];
+  const values = [];
+
+  if (filters.search) {
+    where.push('(u.full_name LIKE ? OR u.email LIKE ? OR u.login_id LIKE ? OR u.position LIKE ?)');
+    const searchVal = `%${filters.search}%`;
+    values.push(searchVal, searchVal, searchVal, searchVal);
+  }
+
+  if (filters.is_active !== undefined) {
+    where.push('u.is_active = ?');
+    values.push(filters.is_active === 'true' || filters.is_active === true ? 1 : 0);
+  }
+
+  const [[counts]] = await pool.query(
+    `SELECT
+      COUNT(*) AS \`All Users\`,
+      SUM(FIND_IN_SET('admin', u.roles) = 0 OR u.roles IS NULL OR u.roles = '') AS \`System Users\`,
+      SUM(FIND_IN_SET('admin', u.roles) > 0) AS \`Administrators\`
+     FROM users u
+     WHERE ${where.join(' AND ')}`,
+    values
+  );
+
+  return Object.fromEntries(Object.entries(counts).map(([key, value]) => [key, Number(value || 0)]));
 }
 
 async function update(id, payload, externalConnection = null) {

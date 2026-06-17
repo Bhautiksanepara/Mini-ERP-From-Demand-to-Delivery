@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const { paginationSortQuery } = require('./list-query.validator');
 
 const idParamSchema = z.object({
   params: z.object({
@@ -13,8 +14,10 @@ const listQuerySchema = z.object({
   params: z.object({}).optional(),
   query: z.object({
     search: z.string().trim().max(150).optional(),
+    product_filter: z.enum(['procure_on_demand', 'low_free_qty']).optional(),
     limit: z.coerce.number().int().positive().max(200).optional(),
-    offset: z.coerce.number().int().nonnegative().optional()
+    offset: z.coerce.number().int().nonnegative().optional(),
+    ...paginationSortQuery
   }).optional()
 });
 

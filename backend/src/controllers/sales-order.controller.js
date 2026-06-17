@@ -14,7 +14,7 @@ const trackedFields = [
 ];
 
 const listSalesOrders = asyncHandler(async (req, res) => {
-  const salesOrders = await salesOrderModel.list({
+  const { rows, pagination, tab_counts } = await salesOrderModel.list({
     ...(req.query || {}),
     user_id: req.user.id
   });
@@ -22,7 +22,11 @@ const listSalesOrders = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: {
-      sales_orders: salesOrders
+      sales_orders: rows
+    },
+    meta: {
+      pagination,
+      tab_counts
     }
   });
 });
@@ -72,7 +76,7 @@ const updateSalesOrder = asyncHandler(async (req, res) => {
   }
 
   const isAdmin = req.user.roles.includes('admin');
-  await salesOrderModel.update(req.params.id, req.body, isAdmin);
+  await salesOrderModel.update(req.params.id, req.body, isAdmin, req.user.id);
 
   const salesOrder = await salesOrderModel.findById(req.params.id);
   const logs = buildFieldChangeLogs({
@@ -233,6 +237,16 @@ const salesOrderDashboardCounts = asyncHandler(async (req, res) => {
   });
 });
 
+const syncSalesOrderStatus = asyncHandler(async (req, res) => {
+  const newStatus = await salesOrderModel.syncStatus(req.params.id);
+
+  res.json({
+    success: true,
+    message: `Sales Order status synced to "${newStatus}"`,
+    data: { status: newStatus }
+  });
+});
+
 module.exports = {
   cancelSalesOrder,
   confirmSalesOrder,
@@ -241,5 +255,6 @@ module.exports = {
   getSalesOrder,
   listSalesOrders,
   salesOrderDashboardCounts,
+  syncSalesOrderStatus,
   updateSalesOrder
 };

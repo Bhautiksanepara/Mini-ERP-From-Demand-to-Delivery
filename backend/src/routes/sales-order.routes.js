@@ -63,5 +63,11 @@ router.post(
   validate(idParamSchema),
   salesOrderController.cancelSalesOrder
 );
+router.post(
+  '/:id/sync-status',
+  requireModulePermission('sales', 'edit', ['allowed', 'limited']),
+  validate(idParamSchema),
+  salesOrderController.syncSalesOrderStatus
+);
 
 module.exports = router;

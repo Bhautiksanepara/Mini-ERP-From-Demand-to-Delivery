@@ -4,8 +4,8 @@ import { Button } from '../components/common/Button';
 import { FormField } from '../components/common/FormField';
 
 const initialForm = {
-  login_id: '',
-  password: '',
+  login_id: 'adminuser',
+  password: 'Admin@12345',
   email: '',
   full_name: '',
   mobile_number: '',

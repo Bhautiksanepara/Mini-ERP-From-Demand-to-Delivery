@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const { paginationSortQuery } = require('./list-query.validator');
 
 const listAuditLogsSchema = z.object({
   body: z.object({}).optional(),
@@ -12,7 +13,8 @@ const listAuditLogsSchema = z.object({
     start_date: z.string().trim().optional(), // ISO date or datetime string
     end_date: z.string().trim().optional(), // ISO date or datetime string
     limit: z.coerce.number().int().positive().max(200).optional(),
-    offset: z.coerce.number().int().nonnegative().optional()
+    offset: z.coerce.number().int().nonnegative().optional(),
+    ...paginationSortQuery
   }).optional()
 });
 

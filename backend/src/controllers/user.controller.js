@@ -14,12 +14,16 @@ const trackedFields = [
 ];
 
 const listUsers = asyncHandler(async (req, res) => {
-  const users = await userModel.list(req.query || {});
-  
+  const { rows, pagination, tab_counts } = await userModel.list(req.query || {});
+
   res.json({
     success: true,
     data: {
-      users: users.map(toPublicUser)
+      users: rows.map(toPublicUser)
+    },
+    meta: {
+      pagination,
+      tab_counts
     }
   });
 });

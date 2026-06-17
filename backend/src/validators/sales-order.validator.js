@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const { paginationSortQuery } = require('./list-query.validator');
 
 const idParamSchema = z.object({
   params: z.object({
@@ -17,7 +18,8 @@ const listSalesOrdersSchema = z.object({
     mine: z.coerce.boolean().optional(),
     late: z.coerce.boolean().optional(),
     limit: z.coerce.number().int().positive().max(200).optional(),
-    offset: z.coerce.number().int().nonnegative().optional()
+    offset: z.coerce.number().int().nonnegative().optional(),
+    ...paginationSortQuery
   }).optional()
 });
 

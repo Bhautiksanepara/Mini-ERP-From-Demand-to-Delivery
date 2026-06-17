@@ -5,6 +5,7 @@ import { moduleConfigs } from '../data/moduleConfigs';
 import { useAuth } from '../hooks/useAuth';
 import { AuthPage } from '../pages/AuthPage';
 import { DashboardPage } from '../pages/DashboardPage';
+import { DiscountSettingsPage } from '../pages/DiscountSettingsPage';
 import { ModulePage } from '../pages/ModulePage';
 import { ProfilePage } from '../pages/ProfilePage';
 
@@ -27,6 +28,8 @@ export function App() {
         <DashboardPage onNavigate={navigate} user={user} />
       ) : activePage === 'profile' ? (
         <ProfilePage user={user} onUserUpdate={updateUser} />
+      ) : activePage === 'discount-rules' ? (
+        <DiscountSettingsPage />
       ) : (
         <ModulePage config={moduleConfigs[activePage]} moduleKey={activePage} initialFilters={pageFilters} user={user} />
       )}

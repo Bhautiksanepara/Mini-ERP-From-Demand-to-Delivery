@@ -218,6 +218,7 @@ CREATE TABLE sales_orders (
   confirmed_at DATETIME NULL,
   delivered_at DATETIME NULL,
   cancelled_at DATETIME NULL,
+  discount_amount DECIMAL(14,2) NOT NULL DEFAULT 0,
   created_by BIGINT UNSIGNED,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -262,6 +263,7 @@ CREATE TABLE purchase_orders (
   confirmed_at DATETIME NULL,
   received_at DATETIME NULL,
   cancelled_at DATETIME NULL,
+  discount_amount DECIMAL(14,2) NOT NULL DEFAULT 0,
   source_sales_order_id BIGINT UNSIGNED NULL,
   created_by BIGINT UNSIGNED,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -371,6 +373,20 @@ CREATE TABLE stock_ledger (
   CONSTRAINT fk_stock_ledger_product FOREIGN KEY (product_id) REFERENCES products(id),
   CONSTRAINT fk_stock_ledger_created_by FOREIGN KEY (created_by) REFERENCES users(id)
 );
+
+CREATE TABLE discount_rules (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  module_code ENUM('sales_order', 'purchase_order') NOT NULL UNIQUE,
+  threshold_amount DECIMAL(14,2) NOT NULL DEFAULT 0,
+  discount_amount DECIMAL(14,2) NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+INSERT INTO discount_rules (module_code, threshold_amount, discount_amount, is_active) VALUES
+  ('sales_order', 0, 0, 0),
+  ('purchase_order', 0, 0, 0);
 
 CREATE TABLE audit_logs (
   id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,

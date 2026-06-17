@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogOut, PanelLeftClose, PanelLeftOpen, UserRound } from 'lucide-react';
+import { LayoutDashboard, LogOut, PanelLeftClose, PanelLeftOpen, Percent, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { BrandMark } from '../components/common/BrandMark';
 import { moduleConfigs } from '../data/moduleConfigs';
@@ -10,7 +10,9 @@ export function AppLayout({ activePage, children, onNavigate, onLogout, user }) 
     ? 'System Administrator Dashboard'
     : activePage === 'profile'
       ? 'My Profile'
-      : moduleConfigs[activePage].title;
+      : activePage === 'discount-rules'
+        ? 'Discount Rules'
+        : moduleConfigs[activePage].title;
   const navigate = (page) => {
     onNavigate(page);
   };
@@ -29,9 +31,15 @@ export function AppLayout({ activePage, children, onNavigate, onLogout, user }) 
         </div>
         <nav className="mt-4 grid gap-1 max-md:grid-cols-2">
           <NavButton active={activePage === 'dashboard'} collapsed={collapsed} icon={LayoutDashboard} label="Dashboard" onClick={() => navigate('dashboard')} />
+          {(() => {
+            const isAdmin = user?.roles?.some(r => r === 'admin' || r.code === 'admin' || (typeof r === 'string' && r === 'admin'));
+            return isAdmin && (
+              <NavButton active={activePage === 'discount-rules'} collapsed={collapsed} icon={Percent} label="Discount Rules" onClick={() => navigate('discount-rules')} />
+            );
+          })()}
           {Object.entries(moduleConfigs).map(([key, config]) => {
             const isAdmin = user?.roles?.some(r => r === 'admin' || r.code === 'admin' || (typeof r === 'string' && r === 'admin'));
-            
+
             const moduleMapping = {
               sales: 'sales',
               purchase: 'purchase',

@@ -1,4 +1,13 @@
 const { pool } = require('../config/database');
+const { parsePagination, resolveSort, buildPaginationMeta } = require('../utils/list-query');
+
+const AUDIT_LOG_SORT_COLUMNS = {
+  created_at: 'al.created_at',
+  user_name: 'u.full_name',
+  module_code: 'al.module_code',
+  record_type: 'al.record_type',
+  action: 'al.action'
+};
 
 async function createAuditLog(payload, connection = pool) {
   const [result] = await connection.execute(
@@ -80,8 +89,8 @@ async function listAuditLogs(filters = {}) {
     values.push(filters.end_date);
   }
 
-  const limit = Math.min(Number(filters.limit || 50), 200);
-  const offset = Number(filters.offset || 0);
+  const { limit, offset, page } = parsePagination(filters);
+  const orderBy = resolveSort(filters, AUDIT_LOG_SORT_COLUMNS, 'created_at');
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   const [rows] = await pool.query(
@@ -100,12 +109,73 @@ async function listAuditLogs(filters = {}) {
      FROM audit_logs al
      LEFT JOIN users u ON u.id = al.user_id
      ${whereSql}
-     ORDER BY al.created_at DESC, al.id DESC
+     ORDER BY ${orderBy}, al.id DESC
      LIMIT ? OFFSET ?`,
     [...values, limit, offset]
   );
 
-  return rows;
+  const [[{ total }]] = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM audit_logs al
+     LEFT JOIN users u ON u.id = al.user_id
+     ${whereSql}`,
+    values
+  );
+
+  const tabCounts = await getAuditLogTabCounts(filters);
+
+  return { rows, pagination: buildPaginationMeta(total, page, limit), tab_counts: tabCounts };
+}
+
+async function getAuditLogTabCounts(filters = {}) {
+  const where = [];
+  const values = [];
+
+  if (filters.search) {
+    where.push('(u.full_name LIKE ? OR al.module_code LIKE ? OR al.record_type LIKE ? OR al.action LIKE ? OR al.field_changed LIKE ?)');
+    values.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+  }
+
+  if (filters.module_code) {
+    where.push('al.module_code = ?');
+    values.push(filters.module_code);
+  }
+
+  if (filters.user_id) {
+    where.push('al.user_id = ?');
+    values.push(filters.user_id);
+  }
+
+  if (filters.record_type) {
+    where.push('al.record_type = ?');
+    values.push(filters.record_type);
+  }
+
+  if (filters.start_date) {
+    where.push('al.created_at >= ?');
+    values.push(filters.start_date);
+  }
+
+  if (filters.end_date) {
+    where.push('al.created_at <= ?');
+    values.push(filters.end_date);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  const [[counts]] = await pool.query(
+    `SELECT
+      COUNT(*) AS \`All Modules\`,
+      SUM(al.action = 'Created') AS \`Created\`,
+      SUM(al.action = 'Updated') AS \`Updated\`,
+      SUM(al.action = 'Deleted') AS \`Deleted\`
+     FROM audit_logs al
+     LEFT JOIN users u ON u.id = al.user_id
+     ${whereSql}`,
+    values
+  );
+
+  return Object.fromEntries(Object.entries(counts).map(([key, value]) => [key, Number(value || 0)]));
 }
 
 async function getAuditLogStats(filters = {}) {

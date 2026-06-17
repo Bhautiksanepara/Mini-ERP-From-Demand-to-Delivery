@@ -2,6 +2,18 @@ const { pool } = require('../config/database');
 const { AppError } = require('../utils/app-error');
 const { generateReference } = require('../utils/reference');
 const { applyStockMovement } = require('../utils/stock-ledger');
+const { parsePagination, resolveSort, buildPaginationMeta } = require('../utils/list-query');
+
+const MANUFACTURING_ORDER_SORT_COLUMNS = {
+  reference: 'mo.reference',
+  schedule_date: 'mo.schedule_date',
+  finished_product_name: 'p.name',
+  quantity: 'mo.quantity',
+  status: 'mo.status',
+  component_count: 'component_count',
+  work_order_count: 'work_order_count',
+  created_at: 'mo.created_at'
+};
 
 const manufacturingOrderColumns = `
   mo.id,
@@ -163,8 +175,8 @@ async function list(filters = {}) {
     where.push('mo.schedule_date < CURRENT_TIMESTAMP');
   }
 
-  const limit = Math.min(Number(filters.limit || 50), 200);
-  const offset = Number(filters.offset || 0);
+  const { limit, offset, page } = parsePagination(filters);
+  const orderBy = resolveSort(filters, MANUFACTURING_ORDER_SORT_COLUMNS, 'created_at');
 
   const [rows] = await pool.query(
     `SELECT ${manufacturingOrderColumns}
@@ -179,12 +191,61 @@ async function list(filters = {}) {
        AND mow.deleted_at IS NULL
      WHERE ${where.join(' AND ')}
      GROUP BY mo.id
-     ORDER BY mo.created_at DESC, mo.id DESC
+     ORDER BY ${orderBy}, mo.id DESC
      LIMIT ? OFFSET ?`,
     [...values, limit, offset]
   );
 
-  return rows;
+  const [[{ total }]] = await pool.query(
+    `SELECT COUNT(DISTINCT mo.id) AS total
+     FROM manufacturing_orders mo
+     INNER JOIN products p ON p.id = mo.finished_product_id
+     LEFT JOIN users u ON u.id = mo.assignee_id
+     WHERE ${where.join(' AND ')}`,
+    values
+  );
+
+  const tabCounts = await getTabCounts(filters);
+
+  return { rows, pagination: buildPaginationMeta(total, page, limit), tab_counts: tabCounts };
+}
+
+async function getTabCounts(filters = {}) {
+  const where = ['mo.deleted_at IS NULL'];
+  const values = [];
+
+  if (filters.search) {
+    where.push('(mo.reference LIKE ? OR p.name LIKE ? OR p.reference LIKE ? OR u.full_name LIKE ?)');
+    values.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+  }
+
+  if (filters.mine) {
+    where.push('mo.assignee_id = ?');
+    values.push(filters.user_id);
+  }
+
+  if (filters.not_assigned) {
+    where.push('mo.assignee_id IS NULL');
+  }
+
+  const [[counts]] = await pool.query(
+    `SELECT
+      COUNT(*) AS \`All\`,
+      SUM(mo.status = 'Draft') AS \`Draft\`,
+      SUM(mo.status = 'Confirmed') AS \`Confirmed\`,
+      SUM(mo.status = 'In Progress') AS \`In Progress\`,
+      SUM(mo.status = 'To Close') AS \`To Close\`,
+      SUM(mo.status = 'Done') AS \`Done\`,
+      SUM(mo.status = 'Confirmed' AND mo.schedule_date IS NOT NULL AND mo.schedule_date < CURRENT_TIMESTAMP) AS \`Late\`,
+      SUM(mo.status = 'Cancelled') AS \`Cancelled\`
+     FROM manufacturing_orders mo
+     INNER JOIN products p ON p.id = mo.finished_product_id
+     LEFT JOIN users u ON u.id = mo.assignee_id
+     WHERE ${where.join(' AND ')}`,
+    values
+  );
+
+  return Object.fromEntries(Object.entries(counts).map(([key, value]) => [key, Number(value || 0)]));
 }
 
 async function listDashboardCounts(userId) {

@@ -1,5 +1,16 @@
 const { pool } = require('../config/database');
 const { generateReference } = require('../utils/reference');
+const { parsePagination, resolveSort, buildPaginationMeta } = require('../utils/list-query');
+
+const PRODUCT_SORT_COLUMNS = {
+  reference: 'p.reference',
+  name: 'p.name',
+  sales_price: 'p.sales_price',
+  cost_price: 'p.cost_price',
+  on_hand_qty: 'p.on_hand_qty',
+  free_to_use_qty: 'free_to_use_qty',
+  created_at: 'p.created_at'
+};
 
 const productColumns = `
   p.id,
@@ -31,8 +42,14 @@ async function list(filters = {}) {
     values.push(`%${filters.search}%`, `%${filters.search}%`);
   }
 
-  const limit = Math.min(Number(filters.limit || 50), 200);
-  const offset = Number(filters.offset || 0);
+  if (filters.product_filter === 'procure_on_demand') {
+    where.push('p.procure_on_demand = 1');
+  } else if (filters.product_filter === 'low_free_qty') {
+    where.push('COALESCE(inv.free_to_use_qty, p.on_hand_qty) <= 0');
+  }
+
+  const { limit, offset, page } = parsePagination(filters);
+  const orderBy = resolveSort(filters, PRODUCT_SORT_COLUMNS, 'name', 'asc');
 
   const [rows] = await pool.query(
     `SELECT ${productColumns}
@@ -41,12 +58,45 @@ async function list(filters = {}) {
      LEFT JOIN vendors v ON v.id = p.vendor_id
      LEFT JOIN boms b ON b.id = p.bom_id
      WHERE ${where.join(' AND ')}
-     ORDER BY p.name
+     ORDER BY ${orderBy}, p.id ASC
      LIMIT ? OFFSET ?`,
     [...values, limit, offset]
   );
 
-  return rows;
+  const [[{ total }]] = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM products p
+     LEFT JOIN product_inventory_summary inv ON inv.product_id = p.id
+     WHERE ${where.join(' AND ')}`,
+    values
+  );
+
+  const tabCounts = await getTabCounts(filters);
+
+  return { rows, pagination: buildPaginationMeta(total, page, limit), tab_counts: tabCounts };
+}
+
+async function getTabCounts(filters = {}) {
+  const where = ['p.deleted_at IS NULL'];
+  const values = [];
+
+  if (filters.search) {
+    where.push('(p.reference LIKE ? OR p.name LIKE ?)');
+    values.push(`%${filters.search}%`, `%${filters.search}%`);
+  }
+
+  const [[counts]] = await pool.query(
+    `SELECT
+      COUNT(*) AS \`All\`,
+      SUM(p.procure_on_demand = 1) AS \`Procure on Demand\`,
+      SUM(COALESCE(inv.free_to_use_qty, p.on_hand_qty) <= 0) AS \`Low Free Qty\`
+     FROM products p
+     LEFT JOIN product_inventory_summary inv ON inv.product_id = p.id
+     WHERE ${where.join(' AND ')}`,
+    values
+  );
+
+  return Object.fromEntries(Object.entries(counts).map(([key, value]) => [key, Number(value || 0)]));
 }
 
 async function findById(id, connection = pool) {

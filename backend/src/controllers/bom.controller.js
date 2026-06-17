@@ -13,12 +13,16 @@ const trackedFields = [
 ];
 
 const listBoms = asyncHandler(async (req, res) => {
-  const boms = await bomModel.list(req.query || {});
+  const { rows, pagination, tab_counts } = await bomModel.list(req.query || {});
 
   res.json({
     success: true,
     data: {
-      boms
+      boms: rows
+    },
+    meta: {
+      pagination,
+      tab_counts
     }
   });
 });

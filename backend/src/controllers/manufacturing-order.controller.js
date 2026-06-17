@@ -18,7 +18,7 @@ const trackedFields = [
 ];
 
 const listManufacturingOrders = asyncHandler(async (req, res) => {
-  const manufacturingOrders = await manufacturingOrderModel.list({
+  const { rows, pagination, tab_counts } = await manufacturingOrderModel.list({
     ...(req.query || {}),
     user_id: req.user.id
   });
@@ -26,7 +26,11 @@ const listManufacturingOrders = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: {
-      manufacturing_orders: manufacturingOrders
+      manufacturing_orders: rows
+    },
+    meta: {
+      pagination,
+      tab_counts
     }
   });
 });

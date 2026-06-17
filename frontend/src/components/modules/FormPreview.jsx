@@ -62,7 +62,7 @@ function FormShell({ children, config, message, onBack, onCancel, onConfirm, sav
   const isError = /failed|error|permission|unauthorized|not authorized|could not|cannot/i.test(message || '');
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 text-left">
+    <div className="flex flex-col h-full min-h-0 bg-slate-50 text-left">
       {/* Sticky Header */}
       <header className="sticky top-0 bg-white border-b border-slate-200 z-10 px-6 py-4 flex items-center justify-between shadow-xs">
         <div className="grid gap-0.5">
@@ -107,7 +107,7 @@ function FormShell({ children, config, message, onBack, onCancel, onConfirm, sav
       </header>
 
       {/* Main scrollable body */}
-      <main ref={bodyRef} className="flex-1 overflow-y-auto p-6 space-y-6">
+      <main ref={bodyRef} className="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
         {message && (
           <div className={`rounded-xl border px-4 py-3 text-sm font-bold shadow-xs flex items-center gap-2 ${isError
               ? 'border-rose-200 bg-rose-50 text-rose-800'
@@ -184,7 +184,7 @@ function OrderEntryForm({ config, moduleKey, onCreated, selectedRecord: initialS
   const initialForm = {
     [partyKey]: '',
     [addressKey]: '',
-    [ownerKey]: '',
+    [ownerKey]: user?.id || '',
     scheduled_date: '',
     source_sales_order_id: '',
     status: '',
@@ -198,10 +198,30 @@ function OrderEntryForm({ config, moduleKey, onCreated, selectedRecord: initialS
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [selectedRecord, setSelectedRecord] = useState(initialSelectedRecord || null);
+  const [discountRule, setDiscountRule] = useState(null);
 
   useEffect(() => {
     setSelectedRecord(initialSelectedRecord || null);
   }, [initialSelectedRecord]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const moduleCode = isSales ? 'sales_order' : 'purchase_order';
+
+    apiRequest(`/discount-rules`)
+      .then((response) => {
+        if (cancelled) return;
+        const rule = (response.data?.discount_rules || []).find((item) => item.module_code === moduleCode);
+        setDiscountRule(rule || null);
+      })
+      .catch(() => {
+        if (!cancelled) setDiscountRule(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isSales]);
 
   useEffect(() => {
     let cancelled = false;
@@ -259,11 +279,21 @@ function OrderEntryForm({ config, moduleKey, onCreated, selectedRecord: initialS
   const isAdmin = user?.roles?.some(r => r === 'admin' || r.code === 'admin' || (typeof r === 'string' && r === 'admin'));
   const isReadOnly = selectedRecord && selectedRecord.status !== 'Draft' && !isAdmin;
 
-  const total = useMemo(() => form.items.reduce((sum, item) => {
+  const subtotal = useMemo(() => form.items.reduce((sum, item) => {
     const qty = Number(item.ordered_qty || 0);
     const price = Number(item.unit_price || 0);
     return sum + qty * price;
   }, 0), [form.items]);
+
+  const discountAmount = useMemo(() => {
+    if (!discountRule?.is_active) return 0;
+    const threshold = Number(discountRule.threshold_amount || 0);
+    const amount = Number(discountRule.discount_amount || 0);
+    if (threshold <= 0 || subtotal < threshold) return 0;
+    return Math.min(amount, subtotal);
+  }, [discountRule, subtotal]);
+
+  const taxableAmount = subtotal - discountAmount;
 
   function updateField(key, value) {
     if (isReadOnly) return;
@@ -375,7 +405,7 @@ function OrderEntryForm({ config, moduleKey, onCreated, selectedRecord: initialS
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0 overflow-hidden">
       <FormShell
         config={config}
         message={message}
@@ -517,17 +547,35 @@ function OrderEntryForm({ config, moduleKey, onCreated, selectedRecord: initialS
             {isSales ? (
               <div className="grid grid-cols-[140px_140px] gap-x-2 gap-y-1 text-right text-sm bg-slate-50 border border-slate-200 rounded-lg p-4">
                 <span className="text-slate-500 font-bold">Subtotal:</span>
-                <span className="text-slate-800 font-extrabold">{total.toFixed(2)}</span>
+                <span className="text-slate-800 font-extrabold">{subtotal.toFixed(2)}</span>
+
+                {discountAmount > 0 && (
+                  <>
+                    <span className="text-emerald-600 font-bold">Discount:</span>
+                    <span className="text-emerald-600 font-extrabold">-{discountAmount.toFixed(2)}</span>
+                  </>
+                )}
 
                 <span className="text-slate-500 font-bold">GST (18%):</span>
-                <span className="text-slate-800 font-extrabold">{(total * 0.18).toFixed(2)}</span>
+                <span className="text-slate-800 font-extrabold">{(taxableAmount * 0.18).toFixed(2)}</span>
 
                 <span className="text-slate-700 font-black pt-1.5 border-t border-slate-200">Total (incl. GST):</span>
-                <span className="text-enterprise-blue font-black pt-1.5 border-t border-slate-200 text-base">{(total * 1.18).toFixed(2)}</span>
+                <span className="text-enterprise-blue font-black pt-1.5 border-t border-slate-200 text-base">{(taxableAmount * 1.18).toFixed(2)}</span>
               </div>
             ) : (
-              <div className="rounded-lg bg-slate-100 border border-slate-200 px-4 py-2 text-sm font-black text-slate-800">
-                Total Order Amount: {total.toFixed(2)}
+              <div className="grid grid-cols-[140px_140px] gap-x-2 gap-y-1 text-right text-sm bg-slate-50 border border-slate-200 rounded-lg p-4">
+                <span className="text-slate-500 font-bold">Subtotal:</span>
+                <span className="text-slate-800 font-extrabold">{subtotal.toFixed(2)}</span>
+
+                {discountAmount > 0 && (
+                  <>
+                    <span className="text-emerald-600 font-bold">Discount:</span>
+                    <span className="text-emerald-600 font-extrabold">-{discountAmount.toFixed(2)}</span>
+                  </>
+                )}
+
+                <span className="text-slate-700 font-black pt-1.5 border-t border-slate-200">Total Order Amount:</span>
+                <span className="text-enterprise-blue font-black pt-1.5 border-t border-slate-200 text-base">{taxableAmount.toFixed(2)}</span>
               </div>
             )}
           </div>
@@ -778,7 +826,7 @@ function ManufacturingOrderForm({ config, onCreated, selectedRecord: initialSele
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0 overflow-hidden">
       <FormShell
         config={config}
         message={message}
@@ -1105,7 +1153,7 @@ function BomForm({ config, onCreated, selectedRecord: initialSelectedRecord, onC
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0 overflow-hidden">
       <FormShell
         config={config}
         message={message}
@@ -1373,7 +1421,7 @@ function ProductForm({ config, onCreated, selectedRecord: initialSelectedRecord,
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0 overflow-hidden">
       <FormShell
         config={config}
         message={message}
@@ -1591,7 +1639,7 @@ function UserForm({ config, onCreated, selectedRecord: initialSelectedRecord, on
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0 overflow-hidden">
       <FormShell
         config={config}
         message={message}

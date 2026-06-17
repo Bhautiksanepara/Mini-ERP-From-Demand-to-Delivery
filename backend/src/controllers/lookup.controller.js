@@ -39,7 +39,7 @@ const listVendors = asyncHandler(async (req, res) => {
 });
 
 const listProducts = asyncHandler(async (req, res) => {
-  const products = await productModel.list(queryWithLimit(req.query));
+  const { rows: products } = await productModel.list(queryWithLimit(req.query));
 
   res.json({
     success: true,
@@ -48,7 +48,7 @@ const listProducts = asyncHandler(async (req, res) => {
 });
 
 const listUsers = asyncHandler(async (req, res) => {
-  const users = await userModel.list({
+  const { rows: users } = await userModel.list({
     ...queryWithLimit(req.query),
     is_active: req.query.is_active ?? 'true'
   });
@@ -62,7 +62,7 @@ const listUsers = asyncHandler(async (req, res) => {
 });
 
 const listBoms = asyncHandler(async (req, res) => {
-  const boms = await bomModel.list(queryWithLimit(req.query));
+  const { rows: boms } = await bomModel.list(queryWithLimit(req.query));
 
   res.json({
     success: true,

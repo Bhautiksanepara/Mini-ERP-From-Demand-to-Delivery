@@ -1,6 +1,16 @@
 const { pool } = require('../config/database');
 const { AppError } = require('../utils/app-error');
 const { generateReference } = require('../utils/reference');
+const { parsePagination, resolveSort, buildPaginationMeta } = require('../utils/list-query');
+
+const BOM_SORT_COLUMNS = {
+  reference: 'b.reference',
+  finished_product_name: 'p.name',
+  quantity: 'b.quantity',
+  component_count: 'component_count',
+  operation_count: 'operation_count',
+  created_at: 'b.created_at'
+};
 
 const bomColumns = `
   b.id,
@@ -57,8 +67,15 @@ async function list(filters = {}) {
     values.push(filters.finished_product_id);
   }
 
-  const limit = Math.min(Number(filters.limit || 50), 200);
-  const offset = Number(filters.offset || 0);
+  if (filters.bom_filter === 'components') {
+    where.push('EXISTS (SELECT 1 FROM bom_components bc2 WHERE bc2.bom_id = b.id AND bc2.deleted_at IS NULL)');
+    where.push('NOT EXISTS (SELECT 1 FROM bom_operations bo2 WHERE bo2.bom_id = b.id AND bo2.deleted_at IS NULL)');
+  } else if (filters.bom_filter === 'operations') {
+    where.push('EXISTS (SELECT 1 FROM bom_operations bo2 WHERE bo2.bom_id = b.id AND bo2.deleted_at IS NULL)');
+  }
+
+  const { limit, offset, page } = parsePagination(filters);
+  const orderBy = resolveSort(filters, BOM_SORT_COLUMNS, 'created_at');
 
   const [rows] = await pool.query(
     `SELECT ${bomColumns}
@@ -70,12 +87,58 @@ async function list(filters = {}) {
        AND bo.deleted_at IS NULL
      WHERE ${where.join(' AND ')}
      GROUP BY b.id
-     ORDER BY b.created_at DESC, b.id DESC
+     ORDER BY ${orderBy}, b.id DESC
      LIMIT ? OFFSET ?`,
     [...values, limit, offset]
   );
 
-  return rows;
+  const [[{ total }]] = await pool.query(
+    `SELECT COUNT(DISTINCT b.id) AS total
+     FROM boms b
+     INNER JOIN products p ON p.id = b.finished_product_id
+     WHERE ${where.join(' AND ')}`,
+    values
+  );
+
+  const tabCounts = await getTabCounts(filters);
+
+  return { rows, pagination: buildPaginationMeta(total, page, limit), tab_counts: tabCounts };
+}
+
+async function getTabCounts(filters = {}) {
+  const where = ['b.deleted_at IS NULL'];
+  const values = [];
+
+  if (filters.search) {
+    where.push('(b.reference LIKE ? OR p.name LIKE ? OR p.reference LIKE ?)');
+    values.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+  }
+
+  if (filters.finished_product_id) {
+    where.push('b.finished_product_id = ?');
+    values.push(filters.finished_product_id);
+  }
+
+  const [[counts]] = await pool.query(
+    `SELECT
+      COUNT(*) AS \`All\`,
+      SUM(t.component_count > 0 AND t.operation_count = 0) AS \`Components\`,
+      SUM(t.operation_count > 0) AS \`Operations\`
+     FROM (
+       SELECT b.id, COUNT(DISTINCT bc.id) AS component_count, COUNT(DISTINCT bo.id) AS operation_count
+       FROM boms b
+       INNER JOIN products p ON p.id = b.finished_product_id
+       LEFT JOIN bom_components bc ON bc.bom_id = b.id
+         AND bc.deleted_at IS NULL
+       LEFT JOIN bom_operations bo ON bo.bom_id = b.id
+         AND bo.deleted_at IS NULL
+       WHERE ${where.join(' AND ')}
+       GROUP BY b.id
+     ) t`,
+    values
+  );
+
+  return Object.fromEntries(Object.entries(counts).map(([key, value]) => [key, Number(value || 0)]));
 }
 
 async function findComponentsByBomId(bomId, connection = pool) {

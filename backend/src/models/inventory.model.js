@@ -1,5 +1,14 @@
 const { pool } = require('../config/database');
 const { applyStockMovement } = require('../utils/stock-ledger');
+const { parsePagination, resolveSort, buildPaginationMeta } = require('../utils/list-query');
+
+const STOCK_LEDGER_SORT_COLUMNS = {
+  created_at: 'sl.created_at',
+  product_name: 'p.name',
+  movement_type: 'sl.movement_type',
+  quantity_change: 'sl.quantity_change',
+  reference_type: 'sl.reference_type'
+};
 
 async function listInventorySummary(filters = {}) {
   const where = [];
@@ -55,6 +64,11 @@ async function listStockLedger(filters = {}) {
     values.push(filters.movement_type);
   }
 
+  if (filters.movement_direction) {
+    where.push('sl.movement_direction = ?');
+    values.push(filters.movement_direction);
+  }
+
   if (filters.reference_type) {
     where.push('sl.reference_type = ?');
     values.push(filters.reference_type);
@@ -75,8 +89,8 @@ async function listStockLedger(filters = {}) {
     values.push(filters.end_date);
   }
 
-  const limit = Math.min(Number(filters.limit || 50), 200);
-  const offset = Number(filters.offset || 0);
+  const { limit, offset, page } = parsePagination(filters);
+  const orderBy = resolveSort(filters, STOCK_LEDGER_SORT_COLUMNS, 'created_at');
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   const [rows] = await pool.query(
@@ -100,12 +114,64 @@ async function listStockLedger(filters = {}) {
      INNER JOIN products p ON p.id = sl.product_id
      LEFT JOIN users u ON u.id = sl.created_by
      ${whereSql}
-     ORDER BY sl.created_at DESC, sl.id DESC
+     ORDER BY ${orderBy}, sl.id DESC
      LIMIT ? OFFSET ?`,
     [...values, limit, offset]
   );
 
-  return rows;
+  const [[{ total }]] = await pool.query(
+    `SELECT COUNT(*) AS total
+     FROM stock_ledger sl
+     INNER JOIN products p ON p.id = sl.product_id
+     ${whereSql}`,
+    values
+  );
+
+  const tabCounts = await getStockLedgerTabCounts(filters);
+
+  return { rows, pagination: buildPaginationMeta(total, page, limit), tab_counts: tabCounts };
+}
+
+async function getStockLedgerTabCounts(filters = {}) {
+  const where = [];
+  const values = [];
+
+  if (filters.search) {
+    where.push('(p.name LIKE ? OR p.reference LIKE ? OR sl.movement_type LIKE ? OR sl.note LIKE ?)');
+    values.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+  }
+
+  if (filters.product_id) {
+    where.push('sl.product_id = ?');
+    values.push(filters.product_id);
+  }
+
+  if (filters.start_date) {
+    where.push('sl.created_at >= ?');
+    values.push(filters.start_date);
+  }
+
+  if (filters.end_date) {
+    where.push('sl.created_at <= ?');
+    values.push(filters.end_date);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  const [[counts]] = await pool.query(
+    `SELECT
+      COUNT(*) AS \`All\`,
+      SUM(sl.movement_direction = 'IN') AS \`Incoming\`,
+      SUM(sl.movement_direction = 'OUT') AS \`Outgoing\`,
+      SUM(sl.movement_type = 'manufacturing_production') AS \`Manufacturing\`,
+      SUM(sl.movement_type = 'sales_delivery') AS \`Sales Delivery\`
+     FROM stock_ledger sl
+     INNER JOIN products p ON p.id = sl.product_id
+     ${whereSql}`,
+    values
+  );
+
+  return Object.fromEntries(Object.entries(counts).map(([key, value]) => [key, Number(value || 0)]));
 }
 
 async function createManualAdjustment(payload, userId) {

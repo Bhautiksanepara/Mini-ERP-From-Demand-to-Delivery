@@ -15,7 +15,7 @@ const trackedFields = [
 ];
 
 const listPurchaseOrders = asyncHandler(async (req, res) => {
-  const purchaseOrders = await purchaseOrderModel.list({
+  const { rows, pagination, tab_counts } = await purchaseOrderModel.list({
     ...(req.query || {}),
     user_id: req.user.id
   });
@@ -23,7 +23,11 @@ const listPurchaseOrders = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: {
-      purchase_orders: purchaseOrders
+      purchase_orders: rows
+    },
+    meta: {
+      pagination,
+      tab_counts
     }
   });
 });
@@ -234,6 +238,16 @@ const purchaseOrderDashboardCounts = asyncHandler(async (req, res) => {
   });
 });
 
+const syncPurchaseOrderStatus = asyncHandler(async (req, res) => {
+  const newStatus = await purchaseOrderModel.syncStatus(req.params.id);
+
+  res.json({
+    success: true,
+    message: `Purchase Order status synced to "${newStatus}"`,
+    data: { status: newStatus }
+  });
+});
+
 module.exports = {
   cancelPurchaseOrder,
   confirmPurchaseOrder,
@@ -242,5 +256,6 @@ module.exports = {
   listPurchaseOrders,
   purchaseOrderDashboardCounts,
   receivePurchaseOrder,
+  syncPurchaseOrderStatus,
   updatePurchaseOrder
 };

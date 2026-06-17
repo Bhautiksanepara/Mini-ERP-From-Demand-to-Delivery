@@ -14,12 +14,16 @@ const listInventorySummary = asyncHandler(async (req, res) => {
 });
 
 const listStockLedger = asyncHandler(async (req, res) => {
-  const ledger = await inventoryModel.listStockLedger(req.query || {});
+  const { rows, pagination, tab_counts } = await inventoryModel.listStockLedger(req.query || {});
 
   res.json({
     success: true,
     data: {
-      stock_ledger: ledger
+      stock_ledger: rows
+    },
+    meta: {
+      pagination,
+      tab_counts
     }
   });
 });

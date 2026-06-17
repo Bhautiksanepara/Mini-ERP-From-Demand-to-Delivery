@@ -2,6 +2,18 @@ const { pool } = require('../config/database');
 const { AppError } = require('../utils/app-error');
 const { generateReference } = require('../utils/reference');
 const { applyStockMovement } = require('../utils/stock-ledger');
+const discountRuleModel = require('./discount-rule.model');
+const { parsePagination, resolveSort, buildPaginationMeta } = require('../utils/list-query');
+
+const PURCHASE_ORDER_SORT_COLUMNS = {
+  reference: 'po.reference',
+  order_date: 'po.order_date',
+  vendor_name: 'v.name',
+  responsible_user_name: 'u.full_name',
+  status: 'po.status',
+  total: 'total',
+  created_at: 'po.created_at'
+};
 
 const purchaseOrderColumns = `
   po.id,
@@ -17,6 +29,7 @@ const purchaseOrderColumns = `
   po.confirmed_at,
   po.received_at,
   po.cancelled_at,
+  po.discount_amount,
   po.source_sales_order_id,
   so.reference AS source_sales_order_reference,
   po.created_by,
@@ -24,7 +37,8 @@ const purchaseOrderColumns = `
   po.updated_at,
   po.deleted_at,
   po.deleted_by,
-  COALESCE(SUM(poi.line_total), 0) AS total,
+  COALESCE(SUM(poi.line_total), 0) AS subtotal,
+  (COALESCE(SUM(poi.line_total), 0) - po.discount_amount) AS total,
   COUNT(poi.id) AS item_count
 `;
 
@@ -63,7 +77,37 @@ async function assertOrderExists(id, connection = pool) {
   return order;
 }
 
+async function autoSyncStatuses() {
+  await pool.execute(`
+    UPDATE purchase_orders po
+    INNER JOIN (
+      SELECT
+        purchase_order_id,
+        COUNT(*) AS total_items,
+        SUM(CASE WHEN received_qty >= ordered_qty THEN 1 ELSE 0 END) AS fully_done_items,
+        SUM(received_qty) AS total_received
+      FROM purchase_order_items
+      WHERE deleted_at IS NULL
+      GROUP BY purchase_order_id
+    ) t ON t.purchase_order_id = po.id
+    SET
+      po.status = CASE
+        WHEN t.total_items > 0 AND t.fully_done_items = t.total_items THEN 'Fully Received'
+        WHEN t.total_received > 0 THEN 'Partially Received'
+        ELSE 'Confirmed'
+      END,
+      po.received_at = CASE
+        WHEN t.total_items > 0 AND t.fully_done_items = t.total_items AND po.received_at IS NULL
+          THEN CURRENT_TIMESTAMP
+        ELSE po.received_at
+      END
+    WHERE po.deleted_at IS NULL
+      AND po.status IN ('Confirmed', 'Partially Received')
+  `);
+}
+
 async function list(filters = {}) {
+  await autoSyncStatuses();
   const where = ['po.deleted_at IS NULL'];
   const values = [];
 
@@ -88,8 +132,8 @@ async function list(filters = {}) {
     where.push('po.scheduled_date < CURRENT_TIMESTAMP');
   }
 
-  const limit = Math.min(Number(filters.limit || 50), 200);
-  const offset = Number(filters.offset || 0);
+  const { limit, offset, page } = parsePagination(filters);
+  const orderBy = resolveSort(filters, PURCHASE_ORDER_SORT_COLUMNS, 'created_at');
 
   const [rows] = await pool.query(
     `SELECT ${purchaseOrderColumns}
@@ -101,12 +145,56 @@ async function list(filters = {}) {
        AND poi.deleted_at IS NULL
      WHERE ${where.join(' AND ')}
      GROUP BY po.id
-     ORDER BY po.created_at DESC, po.id DESC
+     ORDER BY ${orderBy}, po.id DESC
      LIMIT ? OFFSET ?`,
     [...values, limit, offset]
   );
 
-  return rows;
+  const [[{ total }]] = await pool.query(
+    `SELECT COUNT(DISTINCT po.id) AS total
+     FROM purchase_orders po
+     INNER JOIN vendors v ON v.id = po.vendor_id
+     INNER JOIN users u ON u.id = po.responsible_user_id
+     WHERE ${where.join(' AND ')}`,
+    values
+  );
+
+  const tabCounts = await getTabCounts(filters);
+
+  return { rows, pagination: buildPaginationMeta(total, page, limit), tab_counts: tabCounts };
+}
+
+async function getTabCounts(filters = {}) {
+  const where = ['po.deleted_at IS NULL'];
+  const values = [];
+
+  if (filters.search) {
+    where.push('(po.reference LIKE ? OR v.name LIKE ? OR u.full_name LIKE ?)');
+    values.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+  }
+
+  if (filters.mine) {
+    where.push('po.responsible_user_id = ?');
+    values.push(filters.user_id);
+  }
+
+  const [[counts]] = await pool.query(
+    `SELECT
+      COUNT(*) AS \`All\`,
+      SUM(po.status = 'Draft') AS \`Draft\`,
+      SUM(po.status = 'Confirmed') AS \`Confirmed\`,
+      SUM(po.status = 'Partially Received') AS \`Partially Received\`,
+      SUM(po.status = 'Fully Received') AS \`Fully Received\`,
+      SUM(po.status = 'Confirmed' AND po.scheduled_date IS NOT NULL AND po.scheduled_date < CURRENT_TIMESTAMP) AS \`Late\`,
+      SUM(po.status = 'Cancelled') AS \`Cancelled\`
+     FROM purchase_orders po
+     INNER JOIN vendors v ON v.id = po.vendor_id
+     INNER JOIN users u ON u.id = po.responsible_user_id
+     WHERE ${where.join(' AND ')}`,
+    values
+  );
+
+  return Object.fromEntries(Object.entries(counts).map(([key, value]) => [key, Number(value || 0)]));
 }
 
 async function listDashboardCounts(userId) {
@@ -249,6 +337,25 @@ async function replaceItems(orderId, items, connection) {
       ]
     );
   }
+
+  await recalculateDiscount(orderId, connection);
+}
+
+async function recalculateDiscount(orderId, connection) {
+  const [[{ subtotal }]] = await connection.execute(
+    `SELECT COALESCE(SUM(line_total), 0) AS subtotal
+     FROM purchase_order_items
+     WHERE purchase_order_id = ?
+       AND deleted_at IS NULL`,
+    [orderId]
+  );
+
+  const discount = await discountRuleModel.calculateDiscount('purchase_order', subtotal, connection);
+
+  await connection.execute(
+    `UPDATE purchase_orders SET discount_amount = ? WHERE id = ?`,
+    [discount, orderId]
+  );
 }
 
 async function create(payload, userId, externalConnection = null, isAdmin = false) {
@@ -578,6 +685,47 @@ async function cancel(id) {
   }
 }
 
+async function syncStatus(id) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const order = await assertOrderExists(id, connection);
+    const items = await findItemsByOrderId(id, connection);
+
+    if (!items.length) return order.status;
+
+    const allReceived = items.every(item => Number(item.received_qty) >= Number(item.ordered_qty));
+    const anyReceived = items.some(item => Number(item.received_qty) > 0);
+    const newStatus = allReceived ? 'Fully Received' : anyReceived ? 'Partially Received' : 'Confirmed';
+
+    if (newStatus === order.status) {
+      await connection.rollback();
+      return newStatus;
+    }
+
+    const updates = ['status = ?'];
+    const values = [newStatus];
+    if (newStatus === 'Fully Received' && !order.received_at) {
+      updates.push('received_at = CURRENT_TIMESTAMP');
+    }
+    if (newStatus !== 'Draft' && !order.confirmed_at) {
+      updates.push('confirmed_at = CURRENT_TIMESTAMP');
+    }
+    values.push(id);
+    await connection.execute(
+      `UPDATE purchase_orders SET ${updates.join(', ')} WHERE id = ? AND deleted_at IS NULL`,
+      values
+    );
+    await connection.commit();
+    return newStatus;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 module.exports = {
   cancel,
   confirm,
@@ -586,5 +734,6 @@ module.exports = {
   list,
   listDashboardCounts,
   receive,
+  syncStatus,
   update
 };

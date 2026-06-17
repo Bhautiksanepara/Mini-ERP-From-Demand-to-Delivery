@@ -7,7 +7,34 @@ import { KanbanBoard } from "../components/modules/KanbanBoard";
 import { StatusStrip } from "../components/modules/StatusStrip";
 import { getRowsFromPayload, apiRequest } from "../services/apiClient";
 
-function buildEndpoint(config, status, searchTerm, showMineOnly) {
+const SORT_STORAGE_PREFIX = "mini-erp:table-sort:";
+const DEFAULT_PAGE_SIZE = 20;
+const KANBAN_LIMIT = 200;
+
+function loadSortPreference(moduleKey) {
+  try {
+    const raw = sessionStorage.getItem(`${SORT_STORAGE_PREFIX}${moduleKey}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.sort_by) {
+      return { sort_by: parsed.sort_by, sort_dir: parsed.sort_dir === "asc" ? "asc" : "desc" };
+    }
+  } catch {
+    // ignore malformed session storage entries
+  }
+  return null;
+}
+
+function saveSortPreference(moduleKey, sortBy, sortDir) {
+  const key = `${SORT_STORAGE_PREFIX}${moduleKey}`;
+  if (!sortBy) {
+    sessionStorage.removeItem(key);
+    return;
+  }
+  sessionStorage.setItem(key, JSON.stringify({ sort_by: sortBy, sort_dir: sortDir }));
+}
+
+function buildEndpoint(config, status, searchTerm, showMineOnly, page, limit, sortBy, sortDir, view) {
   const params = new URLSearchParams();
 
   if (searchTerm.trim()) {
@@ -16,6 +43,39 @@ function buildEndpoint(config, status, searchTerm, showMineOnly) {
 
   if (showMineOnly) {
     params.set("mine", "true");
+  }
+
+  if (view === "kanban") {
+    params.set("limit", String(KANBAN_LIMIT));
+  } else {
+    if (page) params.set("page", String(page));
+    if (limit) params.set("limit", String(limit));
+  }
+
+  if (sortBy) {
+    params.set("sort_by", sortBy);
+    params.set("sort_dir", sortDir || "desc");
+  }
+
+  // Pass status filters to the backend
+  if (config.statusFilters?.[status]) {
+    Object.entries(config.statusFilters[status]).forEach(([key, val]) => {
+      params.set(key, String(val));
+    });
+  } else if (status === "Components") {
+    params.set("bom_filter", "components");
+  } else if (status === "Operations") {
+    params.set("bom_filter", "operations");
+  } else if (status === "System Users") {
+    params.set("role_filter", "non_admin");
+  } else if (status === "Administrators") {
+    params.set("role_filter", "admin");
+  } else if (status === "Procure on Demand") {
+    params.set("product_filter", "procure_on_demand");
+  } else if (status === "Low Free Qty") {
+    params.set("product_filter", "low_free_qty");
+  } else if (status && status !== "All" && status !== "All Modules" && status !== "All Users") {
+    params.set("status", status);
   }
 
   const query = params.toString();
@@ -83,6 +143,163 @@ function countRowsForStatus(rows, label, activeStatus, activeRows, config) {
   return filterRowsForStatus(rows, label, config).length;
 }
 
+function DeliveryModal({ modal, onClose, onSuccess }) {
+  const { row, items, qtyKey, orderedKey, deliverPath } = modal;
+  const isSales = qtyKey === 'delivered_qty';
+  const actionLabel = isSales ? 'Delivery' : 'Receipt';
+  const qtyLabel = isSales ? 'New Delivered Qty' : 'New Received Qty';
+
+  // Check if every item is already fully done — nothing left to deliver
+  const allFull = items.every(item => Number(item[qtyKey] || 0) >= Number(item[orderedKey] || 0));
+  const fixStatus = isSales ? 'Fully Delivered' : 'Fully Received';
+  const syncEndpoint = deliverPath.replace(/\/(deliver|receive)$/, '/sync-status');
+
+  // Store raw string so the user can freely clear and retype; convert only on submit/blur
+  const [qtys, setQtys] = useState(() =>
+    Object.fromEntries(items.map(item => [item.id, String(Number(item[qtyKey] || 0))]))
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleFixStatus() {
+    setSaving(true);
+    setError('');
+    try {
+      await apiRequest(syncEndpoint, { method: 'POST' });
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Failed to fix order status');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSubmit() {
+    // Validate each item before sending
+    for (const item of items) {
+      const current = Number(item[qtyKey] || 0);
+      const ordered = Number(item[orderedKey] || 0);
+      const newQty = Number(qtys[item.id] ?? current);
+      if (newQty < current) {
+        setError(`Quantity for "${item.product_name || 'item'}" cannot be less than already ${isSales ? 'delivered' : 'received'} (${current}).`);
+        return;
+      }
+      if (newQty > ordered) {
+        setError(`Quantity for "${item.product_name || 'item'}" cannot exceed ordered quantity (${ordered}).`);
+        return;
+      }
+    }
+    const hasIncrease = items.some(item => Number(qtys[item.id] ?? 0) > Number(item[qtyKey] || 0));
+    if (!hasIncrease) {
+      setError('At least one quantity must be higher than the already done amount.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      const payloadItems = items.map(item => ({
+        item_id: item.id,
+        [qtyKey]: Number(qtys[item.id] ?? Number(item[qtyKey] || 0))
+      }));
+      await apiRequest(deliverPath, { method: 'POST', body: JSON.stringify({ items: payloadItems }) });
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(err.message || `Failed to record ${actionLabel.toLowerCase()}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg rounded-xl bg-white shadow-2xl border border-slate-200 z-10 overflow-hidden">
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-5 py-4">
+          <h3 className="text-base font-extrabold text-slate-900">Record {actionLabel} — {row.reference}</h3>
+          <button type="button" onClick={onClose} className="rounded-md p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition">
+            <XCircle size={18} />
+          </button>
+        </div>
+
+        {allFull ? (
+          <div className="p-6 text-center">
+            <p className="font-semibold text-slate-700 mb-1">All items are already fully {isSales ? 'delivered' : 'received'}.</p>
+            <p className="text-sm text-slate-500 mt-1">
+              The order status is still <span className="font-semibold text-amber-600">{row.status}</span> but all quantities are complete.
+              Click <strong>Fix Status</strong> to correct it to <span className="font-semibold text-emerald-600">{fixStatus}</span>.
+            </p>
+            {error && <p className="mt-3 text-xs font-medium text-rose-600">{error}</p>}
+          </div>
+        ) : (
+          <div className="p-5">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-100">
+                  <th className="text-left pb-2 pr-4">Product</th>
+                  <th className="text-right pb-2 px-2">Ordered</th>
+                  <th className="text-right pb-2 px-2">Done</th>
+                  <th className="text-right pb-2 pl-2">{qtyLabel}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map(item => {
+                  const ordered = Number(item[orderedKey] || 0);
+                  const current = Number(item[qtyKey] || 0);
+                  const isFullyDone = current >= ordered;
+                  return (
+                    <tr key={item.id} className="border-b border-slate-50">
+                      <td className="py-2.5 pr-4 font-medium text-slate-800">{item.product_name || item.name || 'Item'}</td>
+                      <td className="py-2.5 px-2 text-right text-slate-500">{ordered}</td>
+                      <td className="py-2.5 px-2 text-right text-slate-400">{current}</td>
+                      <td className="py-2.5 pl-2 text-right">
+                        {isFullyDone ? (
+                          <span className="text-xs font-semibold text-emerald-600 px-2">Complete</span>
+                        ) : (
+                          <input
+                            type="number"
+                            min={current}
+                            max={ordered}
+                            step="1"
+                            value={qtys[item.id] ?? current}
+                            onChange={e => setQtys(q => ({ ...q, [item.id]: e.target.value }))}
+                            onBlur={e => {
+                              const v = Math.min(ordered, Math.max(current, Number(e.target.value) || current));
+                              setQtys(q => ({ ...q, [item.id]: String(v) }));
+                            }}
+                            className="w-24 rounded border border-slate-300 px-2 py-1 text-right text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {error && <p className="mt-3 text-xs font-medium text-rose-600">{error}</p>}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50/50 px-5 py-3">
+          <button type="button" onClick={onClose} disabled={saving} className="px-4 py-2 text-sm font-semibold rounded-md border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-50 transition">
+            Cancel
+          </button>
+          {allFull ? (
+            <button type="button" onClick={handleFixStatus} disabled={saving} className="px-4 py-2 text-sm font-semibold rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition">
+              {saving ? 'Fixing…' : `Fix Status → ${fixStatus}`}
+            </button>
+          ) : (
+            <button type="button" onClick={handleSubmit} disabled={saving} className="px-4 py-2 text-sm font-semibold rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition">
+              {saving ? 'Saving…' : `Confirm ${actionLabel}`}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ModulePage({ moduleKey, config, initialFilters, user }) {
   const [rows, setRows] = useState([]);
   const [sampleRows] = useState(config.sample || []);
@@ -98,14 +315,30 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [showMineOnly, setShowMineOnly] = useState(initialFilters?.mine ?? false);
 
+  // Server-side pagination states
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(DEFAULT_PAGE_SIZE);
+  const [pagination, setPagination] = useState(null);
+  const [tabCounts, setTabCounts] = useState(null);
+
+  // Sorting state
+  const [sortBy, setSortBy] = useState(null);
+  const [sortDir, setSortDir] = useState("desc");
+
   // Drawer states
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeRecord, setActiveRecord] = useState(null);
   const [drawerLoading, setDrawerLoading] = useState(false);
 
+  // Delivery/receipt modal state
+  const [deliveryModal, setDeliveryModal] = useState(null);
+
   useEffect(() => {
     setShowMineOnly(initialFilters?.mine ?? false);
     setStatus(initialFilters?.status ?? config.statusLabels[0]);
+    const storedSort = loadSortPreference(moduleKey);
+    setSortBy(storedSort?.sort_by ?? null);
+    setSortDir(storedSort?.sort_dir ?? "desc");
   }, [config, moduleKey, initialFilters]);
 
   useEffect(() => {
@@ -115,11 +348,16 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
     return () => clearTimeout(handler);
   }, [localSearchTerm]);
 
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [status, debouncedSearchTerm, showMineOnly, sortBy, sortDir, moduleKey]);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError("");
-    apiRequest(buildEndpoint(config, status, debouncedSearchTerm, showMineOnly))
+    apiRequest(buildEndpoint(config, status, debouncedSearchTerm, showMineOnly, page, limit, sortBy, sortDir, view))
       .then((payload) => {
         const nextRows = getRowsFromPayload(
           payload,
@@ -127,12 +365,16 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
         );
         if (!cancelled) {
           setRows(nextRows);
+          setPagination(payload.meta?.pagination || payload.pagination || payload.data?.pagination || null);
+          setTabCounts(payload.meta?.tab_counts || payload.tab_counts || payload.data?.tab_counts || null);
           setSource("api");
         }
       })
       .catch((err) => {
         if (!cancelled) {
           setRows([]);
+          setPagination(null);
+          setTabCounts(null);
           setSource("error");
           setError(err.message || "Could not load records from the API");
         }
@@ -143,21 +385,34 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
     return () => {
       cancelled = true;
     };
-  }, [config, moduleKey, reloadKey, debouncedSearchTerm, status, showMineOnly]);
+  }, [config, moduleKey, reloadKey, debouncedSearchTerm, status, showMineOnly, page, limit, sortBy, sortDir, view]);
 
   const displayRows = useMemo(() => {
-    const liveRows = filterRowsForStatus(rows, status, config);
-    return source === "api" ? liveRows : sampleRows;
-  }, [config, rows, sampleRows, source, status]);
+    return source === "api" ? rows : sampleRows;
+  }, [rows, sampleRows, source]);
 
-  const counts = useMemo(
-    () =>
-      config.statusLabels.map((label) => ({
+  const counts = useMemo(() => {
+    return config.statusLabels.map((label) => {
+      if (tabCounts && tabCounts[label] !== undefined) {
+        return { label, count: tabCounts[label] };
+      }
+      return {
         label,
-        count: countRowsForStatus(rows, label, status, displayRows, config),
-      })),
-    [config, displayRows, rows, status],
-  );
+        count: countRowsForStatus(rows, label, status, displayRows, config)
+      };
+    });
+  }, [config, displayRows, rows, status, tabCounts]);
+
+  const handleSortChange = (column, direction) => {
+    setSortBy(column);
+    setSortDir(direction);
+    saveSortPreference(moduleKey, column, direction);
+  };
+
+  const handlePageSizeChange = (size) => {
+    setLimit(size);
+    setPage(1);
+  };
 
   const handleRowClick = (row) => {
     if (moduleKey === 'inventory' || moduleKey === 'audit') {
@@ -204,20 +459,21 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
           } else {
             await apiRequest(`/sales-orders/${row.id}/confirm`, { method: 'POST' });
           }
-        } else if (newStatus === 'Partially Delivered' || newStatus === 'Fully Delivered') {
+        } else if (newStatus === 'Partially Delivered') {
           if (row.status === 'Draft') {
             await apiRequest(`/sales-orders/${row.id}/confirm`, { method: 'POST' });
           }
           const detailRes = await apiRequest(`/sales-orders/${row.id}`);
           const items = detailRes.data?.sales_order?.items || [];
-          const payloadItems = items.map(item => {
-            const ordered = Number(item.ordered_qty || 0);
-            const current = Number(item.delivered_qty || 0);
-            const nextQty = newStatus === 'Fully Delivered'
-              ? ordered
-              : Math.min(ordered, current + Math.max(1, Math.ceil((ordered - current) / 2)));
-            return { item_id: item.id, delivered_qty: nextQty };
-          });
+          setDeliveryModal({ row, items, qtyKey: 'delivered_qty', orderedKey: 'ordered_qty', deliverPath: `/sales-orders/${row.id}/deliver` });
+          return;
+        } else if (newStatus === 'Fully Delivered') {
+          if (row.status === 'Draft') {
+            await apiRequest(`/sales-orders/${row.id}/confirm`, { method: 'POST' });
+          }
+          const detailRes = await apiRequest(`/sales-orders/${row.id}`);
+          const items = detailRes.data?.sales_order?.items || [];
+          const payloadItems = items.map(item => ({ item_id: item.id, delivered_qty: Number(item.ordered_qty || 0) }));
           await apiRequest(`/sales-orders/${row.id}/deliver`, {
             method: 'POST',
             body: JSON.stringify({ items: payloadItems })
@@ -249,20 +505,21 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
           } else {
             await apiRequest(`/purchase-orders/${row.id}/confirm`, { method: 'POST' });
           }
-        } else if (newStatus === 'Partially Received' || newStatus === 'Fully Received') {
+        } else if (newStatus === 'Partially Received') {
           if (row.status === 'Draft') {
             await apiRequest(`/purchase-orders/${row.id}/confirm`, { method: 'POST' });
           }
           const detailRes = await apiRequest(`/purchase-orders/${row.id}`);
           const items = detailRes.data?.purchase_order?.items || [];
-          const payloadItems = items.map(item => {
-            const ordered = Number(item.ordered_qty || 0);
-            const current = Number(item.received_qty || 0);
-            const nextQty = newStatus === 'Fully Received'
-              ? ordered
-              : Math.min(ordered, current + Math.max(1, Math.ceil((ordered - current) / 2)));
-            return { item_id: item.id, received_qty: nextQty };
-          });
+          setDeliveryModal({ row, items, qtyKey: 'received_qty', orderedKey: 'ordered_qty', deliverPath: `/purchase-orders/${row.id}/receive` });
+          return;
+        } else if (newStatus === 'Fully Received') {
+          if (row.status === 'Draft') {
+            await apiRequest(`/purchase-orders/${row.id}/confirm`, { method: 'POST' });
+          }
+          const detailRes = await apiRequest(`/purchase-orders/${row.id}`);
+          const items = detailRes.data?.purchase_order?.items || [];
+          const payloadItems = items.map(item => ({ item_id: item.id, received_qty: Number(item.ordered_qty || 0) }));
           await apiRequest(`/purchase-orders/${row.id}/receive`, {
             method: 'POST',
             body: JSON.stringify({ items: payloadItems })
@@ -483,9 +740,24 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
       ) : (
         <DataTable
           columns={config.columns}
+          sortableColumns={config.sortableColumns}
           loading={loading}
           rows={displayRows}
           onRowClick={handleRowClick}
+          sortBy={sortBy}
+          sortDir={sortDir}
+          onSortChange={handleSortChange}
+          pagination={pagination}
+          onPageChange={setPage}
+          onPageSizeChange={handlePageSizeChange}
+        />
+      )}
+
+      {deliveryModal && (
+        <DeliveryModal
+          modal={deliveryModal}
+          onClose={() => setDeliveryModal(null)}
+          onSuccess={() => setReloadKey(v => v + 1)}
         />
       )}
 

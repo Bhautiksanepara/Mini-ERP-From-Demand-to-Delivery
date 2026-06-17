@@ -21,7 +21,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   };
 
   // 1. Sales Orders Queries
-  const salesStatuses = ['Draft', 'Confirmed', 'Partially Delivered', 'Fully Delivered'];
+  const salesStatuses = ['Draft', 'Confirmed', 'Partially Delivered', 'Fully Delivered', 'Cancelled'];
   const [salesAll] = await pool.execute(
     `SELECT status, COUNT(*) AS count FROM sales_orders WHERE deleted_at IS NULL GROUP BY status`
   );
@@ -40,7 +40,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   );
 
   // 2. Purchase Orders Queries
-  const purchaseStatuses = ['Draft', 'Confirmed', 'Partially Received', 'Fully Received'];
+  const purchaseStatuses = ['Draft', 'Confirmed', 'Partially Received', 'Fully Received', 'Cancelled'];
   const [purchaseAll] = await pool.execute(
     `SELECT status, COUNT(*) AS count FROM purchase_orders WHERE deleted_at IS NULL GROUP BY status`
   );
@@ -59,7 +59,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   );
 
   // 3. Manufacturing Orders Queries
-  const manufacturingStatuses = ['Draft', 'Confirmed', 'In Progress', 'To Close', 'Done'];
+  const manufacturingStatuses = ['Draft', 'Confirmed', 'In Progress', 'To Close', 'Done', 'Cancelled'];
   const [manufacturingAll] = await pool.execute(
     `SELECT status, COUNT(*) AS count FROM manufacturing_orders WHERE deleted_at IS NULL GROUP BY status`
   );
