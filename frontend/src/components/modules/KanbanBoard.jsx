@@ -71,20 +71,21 @@ export function KanbanBoard({ config, rows, onCardClick, onCardDrop }) {
   ).slice(0, 5);
 
   return (
-    <section className="grid gap-3 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${kanbanColumns.length}, minmax(240px, 1fr))` }}>
+    <section className="overflow-x-auto pb-2" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${kanbanColumns.length}, minmax(220px, 1fr))`, minWidth: `${kanbanColumns.length * 236}px` }}>
       {kanbanColumns.map((status) => {
         const filteredRows = rows.filter((row) => rowMatchesStatus(row, status, config));
         const isHovered = activeColumn === status;
 
         return (
-          <div 
-            key={status} 
+          <div
+            key={status}
             onDragOver={(e) => handleDragOver(e, status)}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, status)}
-            className={`grid min-h-72 min-w-48 content-start gap-3 rounded-lg border p-3 transition-colors ${
-              isHovered 
-                ? 'border-enterprise-blue bg-blue-50/30' 
+            className={`grid min-h-72 content-start gap-3 rounded-lg border p-3 transition-colors ${
+              isHovered
+                ? 'border-enterprise-blue bg-blue-50/30'
                 : 'border-enterprise-line bg-white'
             }`}
           >
@@ -105,6 +106,7 @@ export function KanbanBoard({ config, rows, onCardClick, onCardDrop }) {
           </div>
         );
       })}
+      </div>
     </section>
   );
 }

@@ -38,7 +38,7 @@ export function DataTable({
 
   return (
     <section className="overflow-auto rounded-lg border border-enterprise-line bg-white">
-      <table className="w-full min-w-[840px] border-collapse">
+      <table className="w-full min-w-[600px] border-collapse sm:min-w-[840px]">
         <thead>
           <tr>
             {columns.map((column) => {
@@ -96,14 +96,14 @@ export function DataTable({
         </tbody>
       </table>
       {pagination && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600">
-          <span>
-            {total === 0 ? 'No records' : `Showing ${start}-${end} of ${total}`}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600 sm:px-4 sm:py-3 sm:gap-3">
+          <span className="text-xs sm:text-sm">
+            {total === 0 ? 'No records' : `${start}–${end} of ${total}`}
           </span>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {onPageSizeChange && (
-              <label className="flex items-center gap-2">
-                <span>Rows per page</span>
+              <label className="flex items-center gap-1.5 sm:gap-2">
+                <span className="hidden sm:inline">Rows per page</span>
                 <select
                   className="rounded-md border border-slate-300 px-2 py-1 text-sm font-bold text-slate-700"
                   value={limit}
@@ -115,7 +115,7 @@ export function DataTable({
                 </select>
               </label>
             )}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-slate-50"
@@ -124,7 +124,7 @@ export function DataTable({
               >
                 <ChevronLeft size={16} />
               </button>
-              <span>Page {page} of {totalPages}</span>
+              <span className="text-xs sm:text-sm">{page}/{totalPages}</span>
               <button
                 type="button"
                 className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-slate-50"

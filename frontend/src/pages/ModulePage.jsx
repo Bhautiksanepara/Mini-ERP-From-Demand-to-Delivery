@@ -677,10 +677,10 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
   const showNewButton = moduleKey !== 'inventory' && moduleKey !== 'audit';
 
   return (
-    <main className="grid gap-5 p-6 max-md:p-4">
-      <div className="flex flex-wrap items-center gap-3">
+    <main className="grid gap-4 p-4 md:gap-5 md:p-6">
+      <div className="flex flex-wrap items-center gap-2 md:gap-3">
         {showNewButton && (
-          <Button className="min-w-24" onClick={handleNewClick}>
+          <Button className="min-w-20 md:min-w-24" onClick={handleNewClick}>
             <Plus size={17} />
             New
           </Button>
@@ -691,14 +691,14 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
           onClick={() => setReloadKey((value) => value + 1)}
         >
           <RefreshCw size={17} className={loading ? "animate-spin" : ""} />
-          Refresh
+          <span className="hidden sm:inline">Refresh</span>
         </Button>
-        <label className="flex h-10 w-[min(300px,100%)] items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-slate-500 max-md:w-full">
+        <label className="flex h-10 flex-1 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-slate-500 sm:w-[min(300px,100%)] sm:flex-none">
           <Search size={16} />
           <input
             className="h-8 w-full border-0 bg-transparent text-sm font-medium outline-none text-slate-800"
             onChange={(event) => setLocalSearchTerm(event.target.value)}
-            placeholder={`Search ${config.title || "records"}...`}
+            placeholder={`Search...`}
             value={localSearchTerm}
           />
         </label>
@@ -710,33 +710,34 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
               checked={showMineOnly}
               onChange={(e) => setShowMineOnly(e.target.checked)}
             />
-            <span className="text-sm font-bold">My Orders Only</span>
+            <span className="text-sm font-bold hidden sm:inline">My Orders Only</span>
+            <span className="text-sm font-bold sm:hidden">Mine</span>
           </label>
         )}
-        <div className="grid w-48 grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1">
+        <div className="grid w-36 grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 md:w-48">
           <button
-            className={`inline-flex min-h-9 items-center justify-center gap-1 rounded-md text-sm font-extrabold ${view === "list" ? "bg-white text-enterprise-blueDark shadow-sm" : "text-slate-500"}`}
+            className={`inline-flex min-h-9 items-center justify-center gap-1 rounded-md text-xs font-extrabold md:text-sm ${view === "list" ? "bg-white text-enterprise-blueDark shadow-sm" : "text-slate-500"}`}
             onClick={() => setView("list")}
           >
-            <Menu size={15} />
-            List
+            <Menu size={14} />
+            <span className="hidden sm:inline">List</span>
           </button>
           <button
-            className={`inline-flex min-h-9 items-center justify-center gap-1 rounded-md text-sm font-extrabold ${view === "kanban" ? "bg-white text-enterprise-blueDark shadow-sm" : "text-slate-500"}`}
+            className={`inline-flex min-h-9 items-center justify-center gap-1 rounded-md text-xs font-extrabold md:text-sm ${view === "kanban" ? "bg-white text-enterprise-blueDark shadow-sm" : "text-slate-500"}`}
             onClick={() => setView("kanban")}
           >
-            <Boxes size={15} />
-            Kanban
+            <Boxes size={14} />
+            <span className="hidden sm:inline">Kanban</span>
           </button>
         </div>
         <span
-          className={`ml-auto rounded-full px-3 py-1.5 text-xs font-extrabold ${source === "api" ? "bg-blue-50 text-enterprise-blueDark" : "bg-amber-50 text-amber-700"}`}
+          className={`ml-auto rounded-full px-2 py-1 text-xs font-extrabold md:px-3 md:py-1.5 ${source === "api" ? "bg-blue-50 text-enterprise-blueDark" : "bg-amber-50 text-amber-700"}`}
         >
           {loading
-            ? "Loading API"
+            ? "Loading"
             : source === "api"
-              ? "Live API"
-              : "API needs attention"}
+              ? <span><span className="hidden sm:inline">Live </span>API</span>
+              : "⚠"}
         </span>
       </div>
       {error && (

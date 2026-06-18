@@ -34,9 +34,9 @@ function getGreeting() {
 
 function StatusRow({ label, statuses, counts, loading, onSelect, title }) {
   return (
-    <div className="flex items-start gap-4 max-md:flex-col">
-      <span className="mt-3 w-12 shrink-0 text-xs font-extrabold uppercase tracking-wide text-slate-400 max-md:w-auto">{label}</span>
-      <div className="flex flex-wrap gap-3">
+    <div className="flex items-start gap-3 md:gap-4">
+      <span className="mt-3 w-8 shrink-0 text-xs font-extrabold uppercase tracking-wide text-slate-400 md:w-12">{label}</span>
+      <div className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:gap-3 md:overflow-visible md:pb-0">
         {statuses.map((status) => {
           const count = Number(counts?.[status.key] ?? 0);
           const style = count > 0 ? (STATUS_STYLES[status.key] || DEFAULT_STATUS_STYLE) : DEFAULT_STATUS_STYLE;
@@ -46,18 +46,18 @@ function StatusRow({ label, statuses, counts, loading, onSelect, title }) {
               key={`${label}-${status.key}`}
               onClick={() => onSelect(status)}
               className={cn(
-                'flex min-w-[104px] flex-col items-center justify-center gap-1 rounded-xl border px-4 py-2.5 shadow-sm transition hover:shadow-md hover:ring-2 hover:ring-enterprise-blue/20 active:scale-95',
+                'flex min-w-[88px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl border px-3 py-2 shadow-sm transition hover:shadow-md hover:ring-2 hover:ring-enterprise-blue/20 active:scale-95 md:min-w-[104px] md:px-4 md:py-2.5',
                 style.border,
                 style.bg
               )}
               title={`View ${title} — ${status.label}`}
             >
               {loading ? (
-                <span className="block h-6 w-8 animate-pulse rounded bg-slate-200" />
+                <span className="block h-5 w-7 animate-pulse rounded bg-slate-200 md:h-6 md:w-8" />
               ) : (
-                <span className={cn('text-xl font-extrabold', style.value)}>{count}</span>
+                <span className={cn('text-lg font-extrabold md:text-xl', style.value)}>{count}</span>
               )}
-              <span className={cn('text-xs font-semibold', style.label)}>{status.label}</span>
+              <span className={cn('text-xs font-semibold leading-tight', style.label)}>{status.label}</span>
             </button>
           );
         })}
