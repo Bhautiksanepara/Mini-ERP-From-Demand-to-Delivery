@@ -78,7 +78,7 @@ async function assertOrderExists(id, connection = pool) {
 }
 
 async function autoSyncStatuses() {
-  await pool.execute(`
+  await pool.query(`
     UPDATE purchase_orders po
     INNER JOIN (
       SELECT

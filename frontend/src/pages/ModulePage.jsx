@@ -465,6 +465,11 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
           }
           const detailRes = await apiRequest(`/sales-orders/${row.id}`);
           const items = detailRes.data?.sales_order?.items || [];
+          const allFull = items.every(item => Number(item.delivered_qty || 0) >= Number(item.ordered_qty || 0));
+          if (allFull) {
+            await apiRequest(`/sales-orders/${row.id}/sync-status`, { method: 'POST' });
+            return;
+          }
           setDeliveryModal({ row, items, qtyKey: 'delivered_qty', orderedKey: 'ordered_qty', deliverPath: `/sales-orders/${row.id}/deliver` });
           return;
         } else if (newStatus === 'Fully Delivered') {
@@ -511,6 +516,11 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
           }
           const detailRes = await apiRequest(`/purchase-orders/${row.id}`);
           const items = detailRes.data?.purchase_order?.items || [];
+          const allFull = items.every(item => Number(item.received_qty || 0) >= Number(item.ordered_qty || 0));
+          if (allFull) {
+            await apiRequest(`/purchase-orders/${row.id}/sync-status`, { method: 'POST' });
+            return;
+          }
           setDeliveryModal({ row, items, qtyKey: 'received_qty', orderedKey: 'ordered_qty', deliverPath: `/purchase-orders/${row.id}/receive` });
           return;
         } else if (newStatus === 'Fully Received') {
