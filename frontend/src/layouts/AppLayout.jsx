@@ -84,7 +84,7 @@ export function AppLayout({ activePage, children, onNavigate, onLogout, user }) 
       </aside>
 
       {/* Main content */}
-      <section className="min-w-0">
+      <section className="min-w-0 overflow-x-hidden">
         <header className="sticky top-0 z-10 flex min-h-[64px] items-center gap-3 border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-6">
           {/* Mobile hamburger */}
           <button

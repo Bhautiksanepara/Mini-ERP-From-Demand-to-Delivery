@@ -82,7 +82,7 @@ const listWorkCenters = asyncHandler(async (req, res) => {
 });
 
 const listSalesOrders = asyncHandler(async (req, res) => {
-  const salesOrders = await salesOrderModel.list(queryWithLimit(req.query));
+  const { rows: salesOrders } = await salesOrderModel.list(queryWithLimit(req.query));
 
   res.json({
     success: true,

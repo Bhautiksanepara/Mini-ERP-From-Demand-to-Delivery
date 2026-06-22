@@ -1,5 +1,6 @@
 import { AlertTriangle, Factory, RefreshCw, ShoppingCart, Truck } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { Skeleton } from '../components/common/Skeleton';
 import { apiRequest } from '../services/apiClient';
 import { cn } from '../utils/formatters';
 
@@ -34,9 +35,9 @@ function getGreeting() {
 
 function StatusRow({ label, statuses, counts, loading, onSelect, title }) {
   return (
-    <div className="flex items-start gap-3 md:gap-4">
-      <span className="mt-3 w-8 shrink-0 text-xs font-extrabold uppercase tracking-wide text-slate-400 md:w-12">{label}</span>
-      <div className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:gap-3 md:overflow-visible md:pb-0">
+    <div className="flex min-w-0 items-start gap-2 md:gap-4">
+      <span className="mt-2 w-6 shrink-0 text-xs font-extrabold uppercase tracking-wide text-slate-400 md:mt-3 md:w-12">{label}</span>
+      <div className="grid min-w-0 flex-1 grid-cols-3 gap-1.5 md:flex md:flex-wrap md:gap-3">
         {statuses.map((status) => {
           const count = Number(counts?.[status.key] ?? 0);
           const style = count > 0 ? (STATUS_STYLES[status.key] || DEFAULT_STATUS_STYLE) : DEFAULT_STATUS_STYLE;
@@ -46,18 +47,18 @@ function StatusRow({ label, statuses, counts, loading, onSelect, title }) {
               key={`${label}-${status.key}`}
               onClick={() => onSelect(status)}
               className={cn(
-                'flex min-w-[88px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl border px-3 py-2 shadow-sm transition hover:shadow-md hover:ring-2 hover:ring-enterprise-blue/20 active:scale-95 md:min-w-[104px] md:px-4 md:py-2.5',
+                'flex w-full flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-2 shadow-sm transition hover:shadow-md hover:ring-2 hover:ring-enterprise-blue/20 active:scale-95 md:min-w-[104px] md:w-auto md:px-4 md:py-2.5',
                 style.border,
                 style.bg
               )}
               title={`View ${title} — ${status.label}`}
             >
               {loading ? (
-                <span className="block h-5 w-7 animate-pulse rounded bg-slate-200 md:h-6 md:w-8" />
+                <Skeleton className="h-5 w-6 md:h-6 md:w-8" />
               ) : (
-                <span className={cn('text-lg font-extrabold md:text-xl', style.value)}>{count}</span>
+                <span className={cn('text-base font-extrabold md:text-xl', style.value)}>{count}</span>
               )}
-              <span className={cn('text-xs font-semibold leading-tight', style.label)}>{status.label}</span>
+              <span className={cn('text-[10px] font-semibold leading-tight text-center md:text-xs', style.label)}>{status.label}</span>
             </button>
           );
         })}
@@ -144,7 +145,7 @@ export function DashboardPage({ onNavigate, user }) {
   ];
 
   return (
-    <main className="grid gap-6 p-6 max-md:p-4 bg-enterprise-shell">
+    <main className="grid gap-6 p-6 max-md:p-4 bg-enterprise-shell overflow-x-hidden">
       <div className="flex items-center justify-between gap-4 max-md:flex-col max-md:items-start">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-800">
@@ -166,25 +167,25 @@ export function DashboardPage({ onNavigate, user }) {
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 md:gap-4">
         {summaryCards.map((card) => {
           const Icon = card.icon;
           const isAlert = card.alert && card.total > 0;
           return (
             <div
               key={card.key}
-              className={cn('rounded-xl border bg-white p-5 shadow-sm', isAlert ? 'border-red-200' : 'border-slate-200')}
+              className={cn('rounded-xl border bg-white p-3 shadow-sm md:p-5', isAlert ? 'border-red-200' : 'border-slate-200')}
             >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold uppercase tracking-wide text-slate-400">{card.label}</span>
-                <span className={cn('grid h-9 w-9 place-items-center rounded-lg', isAlert ? 'bg-red-50 text-red-600' : 'bg-enterprise-blue/10 text-enterprise-blue')}>
-                  <Icon size={18} />
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-extrabold uppercase tracking-wide text-slate-400 leading-tight">{card.label}</span>
+                <span className={cn('grid h-8 w-8 shrink-0 place-items-center rounded-lg md:h-9 md:w-9', isAlert ? 'bg-red-50 text-red-600' : 'bg-enterprise-blue/10 text-enterprise-blue')}>
+                  <Icon size={16} />
                 </span>
               </div>
               {loading ? (
-                <span className="mt-3 block h-8 w-16 animate-pulse rounded bg-slate-200" />
+                <Skeleton className="mt-2 h-7 w-12 md:mt-3 md:h-8 md:w-16" />
               ) : (
-                <p className={cn('mt-3 text-3xl font-extrabold', isAlert ? 'text-red-600' : 'text-slate-800')}>{card.total}</p>
+                <p className={cn('mt-2 text-2xl font-extrabold md:mt-3 md:text-3xl', isAlert ? 'text-red-600' : 'text-slate-800')}>{card.total}</p>
               )}
             </div>
           );
@@ -196,20 +197,20 @@ export function DashboardPage({ onNavigate, user }) {
         const moduleStats = stats?.[section.moduleKey];
 
         return (
-          <section key={section.title} className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-              <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-enterprise-blue/10 text-enterprise-blue">
-                  <Icon size={20} />
+          <section key={section.title} className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 md:px-5 md:py-4">
+              <div className="flex items-center gap-2 md:gap-3">
+                <span className="grid h-8 w-8 place-items-center rounded-xl bg-enterprise-blue/10 text-enterprise-blue md:h-10 md:w-10">
+                  <Icon size={18} />
                 </span>
-                <h3 className="text-lg font-extrabold text-slate-800">{section.title}</h3>
+                <h3 className="text-base font-extrabold text-slate-800 md:text-lg">{section.title}</h3>
               </div>
-              <button onClick={() => onNavigate(section.moduleKey)} className="text-sm font-bold text-enterprise-blue hover:underline">
+              <button onClick={() => onNavigate(section.moduleKey)} className="text-sm font-bold text-enterprise-blue hover:underline shrink-0">
                 View all
               </button>
             </div>
 
-            <div className="grid gap-4 p-5">
+            <div className="grid min-w-0 gap-3 p-4 md:gap-4 md:p-5">
               <StatusRow
                 label="All"
                 title={section.title}
@@ -218,7 +219,7 @@ export function DashboardPage({ onNavigate, user }) {
                 loading={loading}
                 onSelect={(status) => onNavigate(section.moduleKey, { status: status.key, mine: false })}
               />
-              <div className="border-t border-slate-50 pt-4">
+              <div className="border-t border-slate-50 pt-3 md:pt-4">
                 <StatusRow
                   label="My"
                   title={section.title}

@@ -193,6 +193,7 @@ function OrderEntryForm({ config, moduleKey, onCreated, selectedRecord: initialS
 
   const [form, setForm] = useState(initialForm);
   const [lookups, setLookups] = useState({ parties: [], users: [], products: [], salesOrders: [] });
+  const [lookupsLoading, setLookupsLoading] = useState(true);
   const [lookupError, setLookupError] = useState('');
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -237,6 +238,7 @@ function OrderEntryForm({ config, moduleKey, onCreated, selectedRecord: initialS
       requests.push(fetchLookup('sales-orders', 'salesOrders', 'sales_orders'));
     }
 
+    setLookupsLoading(true);
     Promise.allSettled(requests)
       .then((results) => {
         if (cancelled) return;
@@ -246,6 +248,9 @@ function OrderEntryForm({ config, moduleKey, onCreated, selectedRecord: initialS
         );
         setLookups(nextLookups);
         setLookupError(lookupErrors.join(' '));
+      })
+      .finally(() => {
+        if (!cancelled) setLookupsLoading(false);
       });
 
     return () => {
@@ -433,8 +438,8 @@ function OrderEntryForm({ config, moduleKey, onCreated, selectedRecord: initialS
           <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2">Order Details</h3>
           <div className="grid grid-cols-4 gap-4 max-xl:grid-cols-2 max-md:grid-cols-1">
             <FormField label={partyLabel} error={errors[partyKey]}>
-              <select className={selectClasses()} value={form[partyKey]} onChange={(event) => updateField(partyKey, event.target.value)} disabled={isReadOnly}>
-                <option value="">Select {partyLabel.toLowerCase()}</option>
+              <select className={selectClasses()} value={form[partyKey]} onChange={(event) => updateField(partyKey, event.target.value)} disabled={isReadOnly || lookupsLoading}>
+                <option value="">{lookupsLoading ? 'Loading…' : lookups.parties.length === 0 ? `No ${partyLabel.toLowerCase()}s found` : `Select ${partyLabel.toLowerCase()}`}</option>
                 {lookups.parties.map((option) => (
                   <option key={option.id} value={option.id}>{getOptionLabel(option)}</option>
                 ))}
@@ -442,8 +447,8 @@ function OrderEntryForm({ config, moduleKey, onCreated, selectedRecord: initialS
             </FormField>
             <FormField label={addressLabel} value={form[addressKey]} onChange={(value) => updateField(addressKey, value)} disabled={isReadOnly} />
             <FormField label={ownerLabel} error={errors[ownerKey]}>
-              <select className={selectClasses()} value={form[ownerKey]} onChange={(event) => updateField(ownerKey, event.target.value)} disabled={isReadOnly}>
-                <option value="">Select user</option>
+              <select className={selectClasses()} value={form[ownerKey]} onChange={(event) => updateField(ownerKey, event.target.value)} disabled={isReadOnly || lookupsLoading}>
+                <option value="">{lookupsLoading ? 'Loading…' : lookups.users.length === 0 ? 'No users found' : 'Select user'}</option>
                 {lookups.users.map((option) => (
                   <option key={option.id} value={option.id}>{getOptionLabel(option)}</option>
                 ))}
@@ -452,8 +457,8 @@ function OrderEntryForm({ config, moduleKey, onCreated, selectedRecord: initialS
             <FormField label="Scheduled Date" type="datetime-local" value={form.scheduled_date} onChange={(value) => updateField('scheduled_date', value)} disabled={isReadOnly} />
             {!isSales && (
               <FormField label="Source Sales Order">
-                <select className={selectClasses()} value={form.source_sales_order_id} onChange={(event) => updateField('source_sales_order_id', event.target.value)} disabled={isReadOnly}>
-                  <option value="">None</option>
+                <select className={selectClasses()} value={form.source_sales_order_id} onChange={(event) => updateField('source_sales_order_id', event.target.value)} disabled={isReadOnly || lookupsLoading}>
+                  <option value="">{lookupsLoading ? 'Loading…' : 'None'}</option>
                   {lookups.salesOrders.map((option) => (
                     <option key={option.id} value={option.id}>{option.reference}</option>
                   ))}
@@ -523,9 +528,9 @@ function OrderEntryForm({ config, moduleKey, onCreated, selectedRecord: initialS
                       }));
                       setMessage('');
                     }}
-                    disabled={isReadOnly}
+                    disabled={isReadOnly || lookupsLoading}
                   >
-                    <option value="">Select product</option>
+                    <option value="">{lookupsLoading ? 'Loading…' : lookups.products.length === 0 ? 'No products found' : 'Select product'}</option>
                     {lookups.products.map((option) => (
                       <option key={option.id} value={option.id}>{getOptionLabel(option)}</option>
                     ))}

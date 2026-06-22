@@ -2,6 +2,7 @@ import { Percent, Save, ShoppingCart, Truck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '../components/common/Button';
 import { FormField } from '../components/common/FormField';
+import { Skeleton } from '../components/common/Skeleton';
 import { apiRequest } from '../services/apiClient';
 import { cn } from '../utils/formatters';
 
@@ -17,6 +18,50 @@ const RULE_META = {
     icon: Truck
   }
 };
+
+function RuleCardSkeleton() {
+  return (
+    <div className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      {/* Header: icon + title + description */}
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-11 w-11 shrink-0 rounded-xl" />
+        <div className="grid flex-1 gap-2">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-3 w-64 max-w-full" />
+        </div>
+      </div>
+
+      {/* Two input fields */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-1.5">
+          <Skeleton className="h-3 w-36" />
+          <Skeleton className="h-10 w-full rounded-md" />
+        </div>
+        <div className="grid gap-1.5">
+          <Skeleton className="h-3 w-32" />
+          <Skeleton className="h-10 w-full rounded-md" />
+        </div>
+      </div>
+
+      {/* Checkbox row */}
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-4 w-4 shrink-0" />
+        <Skeleton className="h-3 w-44" />
+      </div>
+
+      {/* Info box */}
+      <div className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+        <Skeleton className="h-3.5 w-3.5 shrink-0" />
+        <Skeleton className="h-3 w-3/4" />
+      </div>
+
+      {/* Save button */}
+      <div className="flex justify-end">
+        <Skeleton className="h-10 w-32 rounded-lg" />
+      </div>
+    </div>
+  );
+}
 
 function RuleCard({ rule, onSave, saving }) {
   const meta = RULE_META[rule.module_code];
@@ -162,9 +207,8 @@ export function DiscountSettingsPage() {
 
       {loading ? (
         <div className="grid gap-6 lg:grid-cols-2">
-          {[0, 1].map((index) => (
-            <div key={index} className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-white" />
-          ))}
+          <RuleCardSkeleton />
+          <RuleCardSkeleton />
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">

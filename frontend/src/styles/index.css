@@ -18,6 +18,25 @@
   }
 }
 
+@keyframes shimmer {
+  0%   { background-position:  100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #dde4ed 0%,
+    #f1f5f9 40%,
+    #e8eef5 50%,
+    #f1f5f9 60%,
+    #dde4ed 100%
+  );
+  background-size: 300% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: 0.375rem;
+}
+
 @keyframes slideIn {
   from {
     transform: translateX(100%);

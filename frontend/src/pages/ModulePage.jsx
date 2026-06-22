@@ -8,6 +8,22 @@ import { StatusStrip } from "../components/modules/StatusStrip";
 import { getRowsFromPayload, apiRequest } from "../services/apiClient";
 
 const SORT_STORAGE_PREFIX = "mini-erp:table-sort:";
+
+async function verifyStatusInDB(endpoint, recordKey, expectedStatus) {
+  const res = await apiRequest(endpoint);
+  const record = res.data?.[recordKey];
+  if (!record) throw new Error('Verification failed — record not found in database');
+  if (expectedStatus === 'Late') {
+    const schedDate = record.scheduled_date || record.schedule_date;
+    if (!(record.status === 'Confirmed' && schedDate && new Date(schedDate) < new Date())) {
+      throw new Error('Status was not updated to Late in the database');
+    }
+    return;
+  }
+  if (record.status !== expectedStatus) {
+    throw new Error(`Database shows "${record.status}" — expected "${expectedStatus}". Please refresh and try again.`);
+  }
+}
 const DEFAULT_PAGE_SIZE = 20;
 const KANBAN_LIMIT = 200;
 
@@ -445,6 +461,22 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
 
     if (currentColumn === newStatus) return;
 
+    // Validate required fields before any API call
+    let validationError = null;
+    if (moduleKey === 'sales' && !row.customer_name) {
+      validationError = 'Please select a customer before changing status.';
+    } else if (moduleKey === 'purchase' && !row.vendor_name) {
+      validationError = 'Please select a vendor before changing status.';
+    } else if (moduleKey === 'manufacturing' && !row.finished_product_name) {
+      validationError = 'Please select a finished product before changing status.';
+    } else if (moduleKey === 'boms' && !row.product_name) {
+      validationError = 'Please select a product for this BOM before changing status.';
+    }
+    if (validationError) {
+      setError(validationError);
+      throw new Error(validationError);
+    }
+
     setLoading(true);
     setError("");
     try {
@@ -465,19 +497,22 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
           }
           const detailRes = await apiRequest(`/sales-orders/${row.id}`);
           const items = detailRes.data?.sales_order?.items || [];
+          if (items.length === 0) throw new Error('Please add at least one product line to this order before changing its status.');
           const allFull = items.every(item => Number(item.delivered_qty || 0) >= Number(item.ordered_qty || 0));
           if (allFull) {
             await apiRequest(`/sales-orders/${row.id}/sync-status`, { method: 'POST' });
-            return;
+            setReloadKey((val) => val + 1);
+            return true;
           }
           setDeliveryModal({ row, items, qtyKey: 'delivered_qty', orderedKey: 'ordered_qty', deliverPath: `/sales-orders/${row.id}/deliver` });
-          return;
+          return false;
         } else if (newStatus === 'Fully Delivered') {
           if (row.status === 'Draft') {
             await apiRequest(`/sales-orders/${row.id}/confirm`, { method: 'POST' });
           }
           const detailRes = await apiRequest(`/sales-orders/${row.id}`);
           const items = detailRes.data?.sales_order?.items || [];
+          if (items.length === 0) throw new Error('Please add at least one product line to this order before changing its status.');
           const payloadItems = items.map(item => ({ item_id: item.id, delivered_qty: Number(item.ordered_qty || 0) }));
           await apiRequest(`/sales-orders/${row.id}/deliver`, {
             method: 'POST',
@@ -516,19 +551,22 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
           }
           const detailRes = await apiRequest(`/purchase-orders/${row.id}`);
           const items = detailRes.data?.purchase_order?.items || [];
+          if (items.length === 0) throw new Error('Please add at least one product line to this order before changing its status.');
           const allFull = items.every(item => Number(item.received_qty || 0) >= Number(item.ordered_qty || 0));
           if (allFull) {
             await apiRequest(`/purchase-orders/${row.id}/sync-status`, { method: 'POST' });
-            return;
+            setReloadKey((val) => val + 1);
+            return true;
           }
           setDeliveryModal({ row, items, qtyKey: 'received_qty', orderedKey: 'ordered_qty', deliverPath: `/purchase-orders/${row.id}/receive` });
-          return;
+          return false;
         } else if (newStatus === 'Fully Received') {
           if (row.status === 'Draft') {
             await apiRequest(`/purchase-orders/${row.id}/confirm`, { method: 'POST' });
           }
           const detailRes = await apiRequest(`/purchase-orders/${row.id}`);
           const items = detailRes.data?.purchase_order?.items || [];
+          if (items.length === 0) throw new Error('Please add at least one product line to this order before changing its status.');
           const payloadItems = items.map(item => ({ item_id: item.id, received_qty: Number(item.ordered_qty || 0) }));
           await apiRequest(`/purchase-orders/${row.id}/receive`, {
             method: 'POST',
@@ -661,9 +699,23 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
           }
         }
       }
+      // Verify the status actually changed in the DB before showing success
+      const verifyMap = {
+        sales: { url: `/sales-orders/${row.id}`, key: 'sales_order' },
+        purchase: { url: `/purchase-orders/${row.id}`, key: 'purchase_order' },
+        manufacturing: { url: `/manufacturing-orders/${row.id}`, key: 'manufacturing_order' },
+        boms: { url: `/boms/${row.id}`, key: 'bom' },
+      };
+      if (verifyMap[moduleKey]) {
+        const v = verifyMap[moduleKey];
+        await verifyStatusInDB(v.url, v.key, newStatus);
+      }
       setReloadKey((val) => val + 1);
+      return true;
     } catch (err) {
-      setError(err.message || 'Failed to update record status via Drag and Drop');
+      const msg = err.message || 'Failed to update record status via Drag and Drop';
+      setError(msg);
+      throw new Error(msg);
     } finally {
       setLoading(false);
     }
@@ -747,7 +799,7 @@ export function ModulePage({ moduleKey, config, initialFilters, user }) {
       )}
       <StatusStrip activeStatus={status} counts={counts} onChange={setStatus} />
       {view === "kanban" ? (
-        <KanbanBoard config={config} rows={displayRows} onCardClick={handleRowClick} onCardDrop={handleCardDrop} />
+        <KanbanBoard config={config} rows={displayRows} onCardClick={handleRowClick} onCardDrop={handleCardDrop} loading={loading} />
       ) : (
         <DataTable
           columns={config.columns}

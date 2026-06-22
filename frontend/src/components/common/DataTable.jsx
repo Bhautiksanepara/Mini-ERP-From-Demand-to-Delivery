@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCell, labelize } from '../../utils/formatters';
+import { Skeleton } from './Skeleton';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
@@ -67,11 +68,18 @@ export function DataTable({
         </thead>
         <tbody>
           {loading ? (
-            <tr>
-              <td colSpan={columns.length} className="px-4 py-10 text-center text-sm font-bold text-enterprise-muted">
-                Loading records from API...
-              </td>
-            </tr>
+            Array.from({ length: 8 }).map((_, rowIndex) => (
+              <tr key={rowIndex}>
+                {columns.map((column, colIndex) => (
+                  <td key={column} className="border-b border-slate-100 px-4 py-3">
+                    <Skeleton className={`h-3.5 ${
+                      (rowIndex + colIndex) % 3 === 0 ? 'w-3/4' :
+                      (rowIndex + colIndex) % 3 === 1 ? 'w-1/2' : 'w-2/3'
+                    }`} />
+                  </td>
+                ))}
+              </tr>
+            ))
           ) : rows.length ? (
             rows.map((row, index) => (
               <tr
